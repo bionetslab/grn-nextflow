@@ -1,0 +1,14 @@
+name: boostdiff-wf
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - r
+dependencies:
+  - r
+  - r-essentials
+  - r-seurat
+  - r-signac
+  - r-tidyverse
+  - r-optparse
+  - r-data.table
