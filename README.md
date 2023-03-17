@@ -1,0 +1,2 @@
+# boostdiff-nextflow
+Boostdiff workflow 
