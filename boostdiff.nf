@@ -85,6 +85,24 @@ process POSTPROCESS_BOOSTDIFF {
 
 
 workflow {
+  // How to configure this pipeline:
+ 
+  // GLOBAL VARIABLES
+  // params.seurat_object = "$projectDir/../data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
+  // params.column_name = 'infection:tissue:subject:time' : This describes the selection criteria column_names for the data points
+  // params.cluster_name='cluster'
+  // params.publishDir = "$projectDir/../results/"
+
+  /* This is the selection variable:
+     [Selected_covariate_configuation, 'Output_file_name', 'Key_matching_two_files_for_boostdiff', 'Output_folder', 'secondary_selection_criterion', 'categories']
+      1. Selected_covariate_configuation: This refers to the params.colum_name criterion. There must be the same number of entries as the params.colum_name string (lists not allowed)
+      2. Output file name for this data subset. Must be unique within the output folder
+      3. Boostdiff requires two input files. To match the inputs in the pipeline the keys need to be matching and unique accross the pipeline run.
+      4. Output folder for the run
+      5. Secondary selection criterion allowing for multi selection. Only one column can be selected but from this column multiple categories (see 6)
+      6. Categories to select from the column defined in 5.
+  */
+
   input_case_ch = Channel
     .fromList( [['Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28', "Doc_Spleen_d28", 'Doc:Spleen', 'cluster', '1:2'],
                 ['Doc:Spleen:1:d10,Doc:Spleen:3:d10,Doc:Spleen:5:d10', "Doc_Spleen_d10", 'Doc:Spleen', 'cluster', '1:2'],
