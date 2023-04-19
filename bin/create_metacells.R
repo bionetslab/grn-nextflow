@@ -54,7 +54,7 @@ option_list <- list(
 # get command line options, if help option encountered print help and exit,
 # otherwise if options not found on command line then set defaults, 
 opt <- parse_args(OptionParser(option_list=option_list))
-opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds'
+# opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds'
 # n.samples<-100
 # opt$group.var<- "infection:tissue:subject:time"
 # opt$selection<- "Doc:Spleen:1:d10,Doc:Spleen:3:d10"

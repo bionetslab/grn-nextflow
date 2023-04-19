@@ -13,7 +13,7 @@ Wrapper script taking as input the case and control files.
 """
 
 from docopt import docopt
-import boostdiff.postprocessing as pp
+import postprocessing as pp
 import os.path as op
 import os
 import matplotlib.pyplot as plt

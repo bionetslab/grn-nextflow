@@ -5,10 +5,20 @@ channels:
   - defaults
   - r
 dependencies:
+  - python=3.7
   - r
   - r-essentials
   - r-seurat
-  - r-signac
   - r-tidyverse
+  - r-signac
   - r-optparse
   - r-data.table
+  - docopt
+  - numpy
+  - pandas
+  - networkx
+  - matplotlib
+  - cython
+  - pydot
+  - graphviz
+  - gseapy
