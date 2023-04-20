@@ -10,9 +10,9 @@ Wrapper script taking as input the network diff file (as produced by boostdiff).
 
 """
 import pandas as pd
-import argparse
 import gseapy as gp
 import os
+from docopt import docopt
 
 def argument_parser():
 
@@ -69,7 +69,5 @@ def gene_set_enrichment(input_file, output_dir):
 
 
 if __name__ == '__main__':
-    args = argument_parser()
-    print(args.input_file)
-    print(args.output)
-    gene_set_enrichment(input_file=args.input_file, output_dir=args.output)
+    arguments = docopt(__doc__, version='Boostdiff postprocessing')
+    gene_set_enrichment(input_file=arguments['--inputfile'], output_dir=arguments['--output'])
