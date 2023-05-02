@@ -1,11 +1,11 @@
-//params.seurat_object = "$workflow.homeDir/../shared/netmap/data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
-params.seurat_object = "$projectDir/../data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
+params.seurat_object = "$workflow.homeDir/../shared/netmap/data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
+// params.seurat_object = "$projectDir/../data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
 
 params.column_name = 'infection:tissue:subject:time'
 params.cluster_name='cluster'
 params.publishDir = "$projectDir/../results/"
 params.condaDir = "$projectDir/boostdiff-wf/" 
-params.transcription_factors = "$projectDir/../data/DatabaseExtract_v_1.01.csv"
+params.transcription_factors = "$workflow.homeDir/../shared/netmap/data/collectri_transcription_factors.tsv"
 
 /*
  * define the INDEX process that creates a binary index
@@ -161,7 +161,7 @@ workflow {
   checked_ch = CHECK_FILES(tuple_ch, params.transcription_factors)
   checked_ch.files.view()
   checked_ch.transcriptome.view()
-  boostdiff_ch = RUN_BOOSTDIFF(checked_ch, 50, 30, 8, checked_ch.transcriptome, 'regulators')
+  boostdiff_ch = RUN_BOOSTDIFF(checked_ch.files, 50, 200, 30, 8, checked_ch.transcriptome, 'regulators')
   boostdiff_ch.view()
   // processed_ch = POSTPROCESS_BOOSTDIFF(boostdiff_ch)
   // gse_ch = GENE_SET_ENRICHMENT(processed_ch[0], processed_ch[2])
