@@ -6,14 +6,18 @@ A juicy, albeit not yet fully configurable nextflow workflow for Boostdiff using
 ```
 curl -fsSL get.nextflow.io | bash
 ```
+2) Clone this repository and navigate to it:
+```
+git clone git@github.com:bionetslab/boostdiff-nextflow.git && cd boostdiff-nextflow
+```
 2) Install the neccesary conda environment (this will take time). This can be sped up dramatically by using mamba instead of conda:  
 ```
 conda env create --prefix=$(pwd)/boostdiff-wf --file=./boostdiff-wf.yml
 conda activate ./boostdiff-wf
 ```   
-3) Clone the `boostdiff-nextflow` git:
+3) Clone the `boostdiff_inference` tool (https://github.com/gihannagalindez/boostdiff_inference):
 ```
-git clone git@github.com:gihannagalindez/boostdiff_inference.git && cd boostdiff-nextflow
+git clone git@github.com:gihannagalindez/boostdiff_inference.git && cd boostdiff_inference
 pip install .
 cd ..
 ```
