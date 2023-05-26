@@ -1,4 +1,4 @@
-name: boostdiff-wf
+name: boostdiff
 channels:
   - conda-forge
   - bioconda
@@ -22,3 +22,4 @@ dependencies:
   - pydot
   - graphviz
   - gseapy
+  - r-neworkd3

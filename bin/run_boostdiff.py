@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Usage: run_boostdiff.py -c FILE -d FILE -o FOLDER
+"""Usage: run_boostdiff.py -c FILE -d FILE -o FOLDER [-n FEATURES] [-e NUM_ESTIMATORS] [-p PROCESSES] [-s SUBSAMPLES]
 
 Wrapper script taking as input the case and control files.
 
@@ -7,6 +7,10 @@ Wrapper script taking as input the case and control files.
 -c --inputfile1 FILE    specify input file
 -d --inputfile2 FILE    specify input file
 -o --output FOLDER      specify output folder
+-n --n_features FEATURES    specify number of features to use [default: 200]
+-e --n_estimators NUM_ESTIMATORS    specify the number of estimators to use [default: 50]
+-p --n_processes PROCESSES  number of threads [default: 1]
+-s --n_subsamples SUBSAMPLES    number o. of samples in disease and control datasets used to fit a differential tree [default: 15]
 --verbose    print more text
 
 """
@@ -14,25 +18,42 @@ Wrapper script taking as input the case and control files.
 from docopt import docopt
 from boostdiff.main_boostdiff import BoostDiff
 import numpy as np
+import pandas as pd
+from scipy.stats import linregress
+import sys
 
 
+def run_boostdiff(file_control, file_case, output_folder, n_estimators, n_features,
+                  n_subsamples, n_processes):
 
-def run_boostdiff(file_control, file_case, output_folder):
 
-    n_estimators = 50
-    n_features = 50
-    n_subsamples = 50
     keyword = "test"
-    n_processes = 12
 
     model = BoostDiff()
     model.run(file_case, file_control, output_folder, n_estimators, \
-            n_features, n_subsamples, keyword=keyword, n_processes=n_processes)
+            n_features, n_subsamples=n_subsamples, keyword=keyword, n_processes=n_processes)
 
+def cast_arguments(argument_dict):
+    int_args = ['--n_estimators','--n_features', '--n_subsamples','--n_processes']
+    for ia in int_args:
+        try:
+            arguments[ia] = int(arguments[ia])
+        except ValueError:
+            raise ValueError("Trying to parse argument to integer, but failed")
+    return arguments
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Boostdiff postprocessing')
     print(arguments)
-    run_boostdiff(arguments["--inputfile1"], arguments["--inputfile2"], arguments["--output"])
+    arguments = cast_arguments(argument_dict=arguments)
+    print(arguments)
+    run_boostdiff(file_case=arguments["--inputfile1"], 
+                  file_control = arguments["--inputfile2"], 
+                  output_folder = arguments["--output"],
+                  n_estimators = arguments['--n_estimators'],
+                  n_features = arguments['--n_features'],
+                  n_subsamples= arguments['--n_subsamples'],
+                  n_processes = arguments['--n_processes'],
+                  )
 
 
