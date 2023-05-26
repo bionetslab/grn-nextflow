@@ -1,7 +1,7 @@
 params.seurat_object = "$workflow.homeDir/../shared/netmap/data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
 params.column_name = 'infection:tissue:subject:time'
 params.cluster_name='cluster'
-params.publish_dir = "$projectDir/../results/"
+params.publish_dir = "$projectDir/results/"
 
 process SELECT_DATA {
   label 'big_mem'
@@ -95,7 +95,7 @@ process AGGREGATE_POSTPROCESS_BOOSTDIFF {
 }
 
 process PLOT_GRN {
-  publishDir params.publish_dir
+  publishDir params.publish_dir, mode: 'copy', overwrite: true
 
   input:
   tuple val (key), path (network), val (top_n_targets), val (top_n_edges)
@@ -152,8 +152,8 @@ workflow {
       // ['Arm:Spleen:2:d10,Arm:Spleen:3:d10,Arm:Spleen:4:d10', "Arm_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
       // ['Doc:Liver:1:d28,Doc:Liver:2:d28,Doc:Liver:4:d28', "Doc_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
       // ['Arm:Liver:1:d28,Arm:Liver:3:d28,Arm:Liver:5:d28', "Arm_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
-      // ['Doc:Liver:1:d10,Doc:Liver:3:d10,Doc:Liver:5:d10', "Doc_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
-      // ['Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10', "Arm_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
+      ['Doc:Liver:1:d10,Doc:Liver:3:d10,Doc:Liver:5:d10', "Doc_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
+      ['Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10', "Arm_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
     ]
   
   n_runs = 10 // number of total runs of boostdiff
@@ -177,7 +177,7 @@ workflow {
 
   boostdiff_ch = RUN_BOOSTDIFF(checked_ch, boostdiff_run_settings, runs)
   boostdiff_grouped_ch = boostdiff_ch.groupTuple()
-  boostdiff_grouped_ch.view { "value: $it"}
+  boostdiff_grouped_ch.view { "value: $it" }
 
   aggregate_ch = AGGREGATE_POSTPROCESS_BOOSTDIFF(checked_ch.join(boostdiff_grouped_ch), n_runs, boostdiff_filtering_settings)
   aggregate_ch.view()

@@ -28,7 +28,7 @@ Run the follwing command inside the `boostdiff-nextflow` directory: (Replace `$(
 ```
 $(path_to_nextflow)/nextflow run boostdiff.nf
 ```
-
+The results are saved to `results/`
 If you change something in the settings or the run is interrupted use (reuses all the previously performed computations):
 ```
 $(path_to_nextflow)/nextflow run boostdiff.nf -resume
@@ -63,3 +63,44 @@ workflow {
   .
   .
 ```
+
+# Settings of the pipeline
+Standard settings of this pipeline:
+- Data:
+  - Cluster 1, 2
+  - Armstrong vs Docile, Spleen, day 28
+  - Armstrong vs Docile, Liver, day 10
+- No. total runs of boostdiff: 10
+- Settings for individual boostdiff runs:
+  - no. estimators: 50
+  - no. features: 1500
+  - no. subsamples: 30
+  - no. processes: 8
+- Settings for filtering the aggregated results:
+  - Top n nodes: 20 (most differntially expressed target genes between the two conditions)
+  - Top n edges: 100 (highest ranking interactions between remaining genes)
+
+# Pipeline workflow
+1) Read in data
+2) Run boostdiff for a no. total runs
+3) Aggregate results by creating the union of all runs and average over the scores
+4) Filter aggregated results based on the settings
+5) Check regulatory interaction of every edge based on small linear model that is fitted on every edge 
+6) Create output .html file
+
+# Interpreting the results
+Outputs:
+  - This pipeline puts out a .txt file containing the data of the inferred differntial GRN
+  - This pipeline puts out a .html file containing the graph representation of the inferred differential GRN (image shows part of such a differential GRN):
+    - Nodes: represent the genes (annotated with the gene name)
+    - Edges: 
+      - 2 colours representing condition 1,2 (pink and green, see legend)
+      - 4 possible edges:
+        - pink fully drawn arrow  (up regulatory interaction that is stronger in condition 1)
+        - pink dashed arrow       (down regulatory interaction that is stronger in condition 1)
+        - green fully drawn arrow (up regulatory interaction that is stronger in condition 2)
+        - green dashed arrow      (down regulatory interaction that is stronger in condition 2)
+
+![diff_grn](diff_grn_example.png)
+
+
