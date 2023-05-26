@@ -5,19 +5,17 @@ A juicy, albeit not yet fully configurable nextflow workflow for Boostdiff using
 1) Install nextflow with the following command (can be moved to any directory you want): (requires Java version 11 or higher)   
 ```
 curl -fsSL get.nextflow.io | bash
-```  
-2) Clone the `boostdiff-nextflow` git:
 ```
-git clone https://github.com/bionetslab/boostdiff-nextflow.git && cd boostdiff-nextflow
-```
-3) Install the neccesary conda environment (this will take time). This can be sped up by using mamba instead:  
+2) Install the neccesary conda environment (this will take time). This can be sped up dramatically by using mamba instead of conda:  
 ```
 conda env create --prefix=$(pwd)/boostdiff-wf --file=./boostdiff-wf.yml
-``` 
-4) Install boostdiff:
+conda activate ./boostdiff-wf
+```   
+3) Clone the `boostdiff-nextflow` git:
 ```
-git clone https://github.com/gihannagalindez/boostdiff_inference.git  && cd boostdiff_inference
+git clone git@github.com:gihannagalindez/boostdiff_inference.git && cd boostdiff-nextflow
 pip install .
+cd ..
 ```
 Now you are set to run the boostdiff nf pipeline!
 
