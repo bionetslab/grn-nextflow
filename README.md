@@ -28,7 +28,7 @@ Run the follwing command inside the `boostdiff-nextflow` directory: (Replace `$(
 ```
 $(path_to_nextflow)/nextflow run boostdiff.nf
 ```
-The results are saved to `results/`
+The results are saved to `results/`.
 If you change something in the settings or the run is interrupted use (reuses all the previously performed computations):
 ```
 $(path_to_nextflow)/nextflow run boostdiff.nf -resume
@@ -36,7 +36,7 @@ $(path_to_nextflow)/nextflow run boostdiff.nf -resume
 
 For information about the configuration of the pipeline run:
 ```
-$(path_to_nextflow)/nectflow run boostdiff.nf --help=true 
+$(path_to_nextflow)/nectflow run boostdiff.nf --help
 ```
 
 # Settings of the pipeline
