@@ -1,9 +1,22 @@
 #!/usr/bin/env Rscript
 
-library(networkD3)
-library(htmlwidgets)
-library(optparse)
+################################################################################
+# This script constructs a force directed graph visualization of a differential GRN
+# using the networkD3 package  
+# 
+# Params: 
+# Input file (tsv file containg the differential GRN)
+# Output file (file name of output)
+# Output folder (path to output folder)
+#
+################################################################################
 
+### Imports
+require(networkD3)
+require(htmlwidgets)
+require(optparse)
+
+################################################################################
 
 option_list <- list(
   make_option(c("-o", "--output.folder"), type = 'character',

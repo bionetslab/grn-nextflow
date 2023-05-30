@@ -37,10 +37,10 @@ def cast_arguments(argument_dict):
     int_args = ['--n_estimators','--n_features', '--n_subsamples','--n_processes']
     for ia in int_args:
         try:
-            arguments[ia] = int(arguments[ia])
+            argument_dict[ia] = int(argument_dict[ia])
         except ValueError:
             raise ValueError("Trying to parse argument to integer, but failed")
-    return arguments
+    return argument_dict
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Boostdiff postprocessing')

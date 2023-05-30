@@ -1,7 +1,52 @@
-params.seurat_object = "$workflow.homeDir/../shared/netmap/data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
-params.column_name = 'infection:tissue:subject:time'
-params.cluster_name='cluster'
-params.publish_dir = "$projectDir/results/"
+if ( params.help ) {
+  help = """boostdiff.nf: Performs --n_runs of boostdiff on filtered data of --seurat_object based on the selection criteria.
+                          Check in boostdiff.nf "workflow { ... }" for more information about the configuration of the selection criteria since it is currently hardcoded there.
+
+                          | Required arguments:
+                          |   --seurat_object Location of the seurat object data file 
+                          |                   [default: ${params.seurat_object}]  
+                          |
+                          | Optional arguments:
+                          |   --publish_dir   Location to store the output files
+                          |                   [default  ${params.publish_dir}]
+                          |   --column_name   Names of columns in seurat object data file
+                          |                   [default: ${params.column_name}]
+                          |   --n_runs        No. runs of boostdiff to perform (to combat randomness of the tool)
+                          |                   [default: ${params.n_runs}]
+                          |   --n_estimators  No. estimators to use for each boostdiff run
+                          |                   [default: ${params.n_estimators}]
+                          |   --n_features    No. features to use for each boostdiff run
+                          |                   [default: ${params.n_features}]
+                          |   --n_subsamples  No. subsamples to use for each boostdiff run
+                          |                   [default: ${params.n_subsamples}]
+                          |   --n_processes   No. processes to use for each boostdiff run
+                          |                   [default: ${params.n_processes}]
+                          |   --top_n_targets No. top target genes to filter results
+                          |                   [default: ${params.top_n_targets}]
+                          |   --top_n_edges   No. top edges to filter results
+                          |                   [default: ${params.top_n_edges}]
+  """.stripMargin()
+  println(help)
+  exit(0)
+}
+
+log.info"""\
+BOOSTDIFF - NF    
+=======================
+
+seurat_object : $params.seurat_object
+publish_dir   : $params.publish_dir
+column_name   : $params.column_name
+n_runs        : $params.n_runs
+n_estimators  : $params.n_estimators
+n_features    : $params.n_features   
+n_subsamples  : $params.n_subsamples
+n_processes   : $params.n_processes
+top_n_targets : $params.top_n_targets
+top_n_edges   : $params.top_n_edges
+
+Run with --help for additional information
+"""
 
 process SELECT_DATA {
   label 'big_mem'
@@ -95,7 +140,7 @@ process AGGREGATE_POSTPROCESS_BOOSTDIFF {
 }
 
 process PLOT_GRN {
-  publishDir params.publish_dir, mode: 'copy', overwrite: true
+  publishDir params.publish_dir
 
   input:
   tuple val (key), path (network), val (top_n_targets), val (top_n_edges)
@@ -110,19 +155,6 @@ process PLOT_GRN {
 }
 
 workflow {
-  // How to configure this pipeline:
- 
-  /* GLOBAL VARIABLES 
-  params.seurat_object = "$projectDir/../data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds"
-    => Path to the data
-  params.column_name = 'infection:tissue:subject:time' 
-    => This describes the selection criteria column_names for the data points
-  params.cluster_name = 'cluster'
-    => This describes the cluster name
-  params.publish_dir = "$projectDir/../results/"
-    => Sets the path to the output results
-  */ 
-
   /* This is the selection variable:
      [Selected_covariate_configuation, 'Output_file_name', 'Key_matching_two_files_for_boostdiff', 'Output_folder', 'secondary_selection_criterion', 'categories']
       1. Selected_covariate_configuation: This refers to the params.colum_name criterion. There must be the same number of entries as the params.colum_name string (lists not allowed)
@@ -156,10 +188,19 @@ workflow {
       ['Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10', "Arm_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
     ]
   
-  n_runs = 10 // number of total runs of boostdiff
-  runs = (1..n_runs)
-  boostdiff_run_settings = [50, 1500, 30, 8] // [n_estimators, n_features, n_subsamples, n_processes]
-  boostdiff_filtering_settings = [20, 100]  // [top_n_targets, top_n_edges]
+  runs = (1..params.n_runs)
+  boostdiff_run_settings = // [n_estimators, n_features, n_subsamples, n_processes]
+  [
+    params.n_estimators,
+    params.n_features,
+    params.n_subsamples,
+    params.n_processes
+  ] 
+  boostdiff_filtering_settings = // [top_n_targets, top_n_edges]
+  [
+    params.top_n_targets,
+    params.top_n_edges
+  ]  
 
 
   // Workflow:
@@ -179,7 +220,7 @@ workflow {
   boostdiff_grouped_ch = boostdiff_ch.groupTuple()
   boostdiff_grouped_ch.view { "value: $it" }
 
-  aggregate_ch = AGGREGATE_POSTPROCESS_BOOSTDIFF(checked_ch.join(boostdiff_grouped_ch), n_runs, boostdiff_filtering_settings)
+  aggregate_ch = AGGREGATE_POSTPROCESS_BOOSTDIFF(checked_ch.join(boostdiff_grouped_ch), params.n_runs, boostdiff_filtering_settings)
   aggregate_ch.view()
 
   plot_ch = PLOT_GRN(aggregate_ch)
