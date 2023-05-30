@@ -1,6 +1,7 @@
 if ( params.help ) {
-  help = """boostdiff.nf: Performs --n_runs of boostdiff on filtered data of --seurat_object based on the selection criteria.
-                          Check in boostdiff.nf "workflow { ... }" for more information about the configuration of the selection criteria since it is currently hardcoded there.
+  help = """
+  boostdiff.nf: Performs --n_runs of boostdiff on filtered data of --seurat_object based on the selection criteria.
+                Check in boostdiff.nf "workflow { ... }" for more information about the configuration of the selection criteria since it is currently hardcoded there.
 
                           | Required arguments:
                           |   --seurat_object Location of the seurat object data file 
