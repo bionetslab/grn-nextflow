@@ -1,1 +1,0 @@
-/data_slow/yb85avem/projects/NetMap_clean/boostdiff-nextflow/work/1a/1147a6acbbfc3a23ca86c000794180/Arm_vs_Doc_D10:Spleen/run_2/case_control.txt
