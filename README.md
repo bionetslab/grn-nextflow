@@ -28,7 +28,7 @@ Run the follwing command inside the `boostdiff-nextflow` directory: (Replace `$(
 ```
 $(path_to_nextflow)/nextflow run boostdiff.nf
 ```
-The results are saved to `results/`.
+The results are saved to `results/`. Note that only symlinks to the `work/` folder of nextflow are saved in the `results/` folder. If you want to upload your results to a git repository you need to copy the results (with following symlinks) into a folder and upload this folder. 
 If you change something in the settings or the run is interrupted use (reuses all the previously performed computations):
 ```
 $(path_to_nextflow)/nextflow run boostdiff.nf -resume
