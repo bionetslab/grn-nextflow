@@ -155,8 +155,36 @@ process PLOT_GRN {
   """
 }
 
+process CREATE_SHINY_APP {
+  publishDir params.publish_dir
+
+  input: 
+  tuple val (key), path (network), val (top_n_targets), val (top_n_edges)
+  tuple val (key), path (case_file), path (control_file)
+  path seurat_object
+  val column_name
+  val selection
+
+  output:
+  path ("${key}/run_shiny.sh")
+  path ("${key}/${case_file}")
+  path ("${key}/${control_file}")
+
+  script:
+  """
+  mkdir -p "${key}"
+  touch "${key}/run_shiny.sh"
+  touch "shiny.R"
+  cat ${case_file} >> "${key}/${case_file}"
+  cat ${control_file} >> "${key}/${control_file}"
+  echo "Rscript ${projectDir}/bin/shiny_app.R -n ${network} -c ${case_file} -d ${control_file} -f ${params.seurat_object} -g ${column_name} -s ${selection}" >> "${key}/run_shiny.sh"
+  chmod u+x ${key}/run_shiny.sh
+  """
+}
+  // shiny_app.R -n ${network} -c ${case_file} -d ${control_file} -f ${seurat_object} -g ${column_name} -s ${selection} -p ${port}
+
 workflow {
-  /* This is the selection variable:
+  /* This is the selection variable: (In all names, '-' must not be used!)
      [Selected_covariate_configuation, 'Output_file_name', 'Key_matching_two_files_for_boostdiff', 'Output_folder', 'secondary_selection_criterion', 'categories']
       1. Selected_covariate_configuation: This refers to the params.colum_name criterion. There must be the same number of entries as the params.colum_name string (lists not allowed)
       2. Output file name for this data subset. Must be unique within the output folder
@@ -165,6 +193,7 @@ workflow {
       5. Secondary selection criterion allowing for multi selection. Only one column can be selected but from this column multiple categories (see 6)
       6. Categories to select from the column defined in 5.
   */
+
   // selection = 
   //   [
   //     ['Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28', "Doc_Spleen_d28", 'Doc:Spleen', 'cluster', '1:2'],
@@ -179,14 +208,14 @@ workflow {
   
   selection = 
     [
-      ['Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28', "Doc_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
-      ['Arm:Spleen:1:d28,Arm:Spleen:3:d28,Arm:Spleen:5:d28', "Arm_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
-      // ['Doc:Spleen:1:d10,Doc:Spleen:3:d10,Doc:Spleen:5:d10', "Doc_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
-      // ['Arm:Spleen:2:d10,Arm:Spleen:3:d10,Arm:Spleen:4:d10', "Arm_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
-      // ['Doc:Liver:1:d28,Doc:Liver:2:d28,Doc:Liver:4:d28', "Doc_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
-      // ['Arm:Liver:1:d28,Arm:Liver:3:d28,Arm:Liver:5:d28', "Arm_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
-      ['Doc:Liver:1:d10,Doc:Liver:3:d10,Doc:Liver:5:d10', "Doc_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
-      ['Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10', "Arm_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
+      // ['Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28', "Doc_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
+      // ['Arm:Spleen:1:d28,Arm:Spleen:3:d28,Arm:Spleen:5:d28', "Arm_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
+      ['Doc:Spleen:1:d10,Doc:Spleen:3:d10,Doc:Spleen:5:d10', "Doc_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
+      ['Arm:Spleen:2:d10,Arm:Spleen:3:d10,Arm:Spleen:4:d10', "Arm_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
+      ['Doc:Liver:1:d28,Doc:Liver:2:d28,Doc:Liver:4:d28', "Doc_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
+      ['Arm:Liver:1:d28,Arm:Liver:3:d28,Arm:Liver:5:d28', "Arm_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
+      // ['Doc:Liver:1:d10,Doc:Liver:3:d10,Doc:Liver:5:d10', "Doc_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
+      // ['Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10', "Arm_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
     ]
   
   runs = (1..params.n_runs)
@@ -207,7 +236,7 @@ workflow {
   // Workflow:
   input_case_ch = Channel.fromList(selection)  
   input_case_ch.view { "$it" }
-  
+
   data_case_ch = SELECT_DATA(params.seurat_object, params.column_name , input_case_ch)
   data_case_ch.view()
 
@@ -225,5 +254,11 @@ workflow {
   aggregate_ch.view()
 
   plot_ch = PLOT_GRN(aggregate_ch)
-  // plot_ch.view()
+  CREATE_SHINY_APP(
+                aggregate_ch, 
+                checked_ch, 
+                params.seurat_object, 
+                params.column_name, 
+                selection.collect { it.join(",") }.join("-"), 
+              )
 }
