@@ -100,7 +100,6 @@ if (gexp_condition_names[1] == gexp_condition1_name) {
 ########### Loading Seurat object, filtering the correct cells and performing differential testing
 adata <- readRDS(opt$seurat.file)
 adata <- adata$all
-print(opt$group.var)
 opt$group.var<-strsplit(opt$group.var, ':')[[1]]
 Idents(adata)<- opt$group.var
 
@@ -213,13 +212,11 @@ ui <- shinyUI(
               plotOutput("linear_model_plot")),
           ),
           column(3,
+            fluidRow(class = "table row",
+              plotOutput("comparison_violin_plot")),
+            fluidRow(class = "table row",
+              plotOutput("comparison_linear_model_plot")),
           ),
-          # column(3,
-          #   fluidRow(class = "table row",
-          #     plotOutput("violin_plot2")),
-          #   fluidRow(class = "table row",
-          #     plotOutput("linear_model_plot2")),
-          # ),
         ),
       ),
     ),
@@ -334,31 +331,34 @@ server <- function(input, output) {
     plot
   })
 
+  comparison_data <- reactiveValues(arm_data = NULL, doc_data = NULL, condition_names = NULL)
   # comparing to other Results:
   observeEvent(input$compare_button, {
+    comparison_data$doc_data <- NULL
+    comparison_data$arm_data <- NULL
     selection <- NULL
-    doc_data <- NULL
-    spleen_data <- NULL
     if(input$selection_dropdown == "NA" || is.null(input$clusters_pick)) {
       return()
     } else if (input$selection_dropdown == "Arm vs Doc D10 Spleen") {
       selection <- c("Doc:Spleen:1:d10,Doc:Spleen:3:d10,Doc:Spleen:5:d10", "Arm:Spleen:2:d10,Arm:Spleen:3:d10,Arm:Spleen:4:d10")
+      comparison_data$condition_names <- c("Doc_Spleen_d10", "Arm_Spleen_d10")
     } else if (input$selection_dropdown == "Arm vs Doc D28 Spleen") {
       selection <- c("Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28", "Arm:Spleen:1:d28,Arm:Spleen:3:d28,Arm:Spleen:5:d28")
+      comparison_data$condition_names <- c("Doc_Spleen_d28", "Arm_Spleen_d28")
     } else if (input$selection_dropdown == "Arm vs Doc D10 Liver") {
       selection <- c("Doc:Liver:1:d10,Doc:Liver:3:d10,Doc:Liver:5:d10", "Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10")
+      comparison_data$condition_names <- c("Doc_Liver_d10", "Arm_Liver_d10")
     } else if (input$selection_dropdown == "Arm vs Doc D28 Liver") {
       selection <- c("Doc:Liver:1:d28,Doc:Liver:2:d28,Doc:Liver:4:d28", "Arm:Liver:1:d28,Arm:Liver:3:d28,Arm:Liver:5:d28")
+      comparison_data$condition_names <- c("Doc_Liver_d28", "Arm_Liver_d28")
     } 
     
     clusters <- strsplit(input$clusters_pick, ",")
     cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
     n.samples <- 30           # TODO: Same as line above, make it flexible (also hardcoded in boostdiff.nf), however does not break as line above if not flexible and changed
     p.missing <- 10           # Hardcoded in create_metacells.R (not set in boostdiff.nf) 
-    
-    for (i in seq_along(selection)) {
-      s <- selection[i]
-      s <- strsplit(selection, ',')
+    for (s in selection) {
+      s <- strsplit(s, ',')
       s <- unname(sapply(s, function(x) strsplit(x ,":")))
 
       meta.cell.dfs<-list()
@@ -378,7 +378,6 @@ server <- function(input, output) {
 
 
         subset<-subset(adata, cells = select.cells)
-        print(subset)
         # Find number of barcodes in object
         n.cells<-nrow(subset@meta.data)
         # Compute number of cells to aggregate
@@ -406,12 +405,78 @@ server <- function(input, output) {
       }
       select<-which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(p.missing/100))
       meta.cell.df<-meta.cell.df[select, ]
-      if(i == 1) {
-        doc_data <- data.frame(meta.cell.df)
-        print(head(doc_data))
+      if(is.null(comparison_data$doc_data)) {
+        comparison_data$doc_data <- meta.cell.df     
+      } else {
+        comparison_data$arm_data <- meta.cell.df
       }
     }
+    gene_names <- intersect(comparison_data$doc_data$Gene, comparison_data$arm_data$Gene)
+    comparison_data$doc_data <- comparison_data$doc_data[Gene %in% gene_names]
+    comparison_data$arm_data <- comparison_data$arm_data[Gene %in% gene_names]      
+  })  
+
+  output$comparison_violin_plot <- renderPlot({
+    testing <- input$id_node
+    if(!is.null(comparison_data$arm_data)) {
+      if (!(input$id_node %in% comparison_data$doc_data$Gene)) {
+        title <- paste(input$id_node, " not found in comparison dataset")
+      }else {
+        title <- input$id_node
+      }
+      
+      expr1 <- as.numeric(comparison_data$doc_data[Gene == input$id_node, -1])
+      expr2 <- as.numeric(comparison_data$arm_data[Gene == input$id_node, -1])
+
+      df <- data.frame(
+        condition = c(rep(comparison_data$condition_names[1], length(expr1)), rep(comparison_data$condition_names[2], length(expr2))),
+        gexpr = c(expr1, expr2)
+      )
+      plot <- ggplot(df, aes(x=condition, y=gexpr, fill=condition)) +
+      geom_violin() +
+        scale_fill_manual(values=colors) +
+        ggtitle(title) + theme(plot.title = element_text(hjust = 0.5)) +
+        xlab("Condition") +
+        ylab("Gene expression") 
+      # Idea: "save plot switch -> saves all plots that you select"
+      # ggsave(filename = "dnjac15_gene_expression_plot.png", plot = plot, width = 6, height = 4, dpi = 300)
+
+      plot
+    }
   })
+
+    output$comparison_linear_model_plot <- renderPlot({
+      if(!is.null(comparison_data$arm_data)) {
+        if (!(input$id_source %in% comparison_data$doc_data$Gene) || !(input$id_target %in% comparison_data$doc_data$Gene)) {
+          title <- "Source or target not found in comparison dataset"
+        } else {
+          title <- sprintf("Edge %s -> %s", input$id_source, input$id_target)
+        }
+        expr1_x <- as.numeric(comparison_data$doc_data[Gene == input$id_source, -1])    
+        expr1_y <- as.numeric(comparison_data$doc_data[Gene == input$id_target, -1])    
+
+        expr2_x <- as.numeric(comparison_data$arm_data[Gene == input$id_source, -1])    
+        expr2_y <- as.numeric(comparison_data$arm_data[Gene == input$id_target, -1])
+
+        coef_cond1 <- coefficients(lm(expr1_y ~ expr1_x))
+        coef_cond2 <- coefficients(lm(expr2_y ~ expr2_x))
+
+        df <- data.frame(
+          x = c(expr1_x, expr2_x),
+          y = c(expr1_y, expr2_y),
+          condition = c(rep(comparison_data$condition_names[1], length(expr1_x)), rep(comparison_data$condition_names[2], length(expr2_x)))
+        )
+        plot <- ggplot(df, aes(x=x, y=y, colour=condition)) +
+          geom_point() +
+          scale_colour_manual(values=colors) +
+          geom_smooth(method="lm", formula = "y ~ x", se = FALSE) + 
+          ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
+      
+        # ggsave(filename = "dnjac15_tox_edge_linear_model.png", plot = plot, width = 6, height = 4, dpi = 300)
+
+        plot
+      }
+    })
 
   # rendering Seurat diffexp test plot
   # output$diff_exp_table <- renderDT(
