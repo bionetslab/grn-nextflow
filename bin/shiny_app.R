@@ -14,6 +14,9 @@ library(optparse)
 library(shinyWidgets)
 library(DT)
 library(data.table)
+library(shinythemes)
+library(shinyhelper)
+library(dplyr)
 ################################################################################
 
 option_list <- list(
@@ -29,7 +32,9 @@ option_list <- list(
                 default='', help="Path to Seurat file"),
     make_option(c("-g", "--group.var"), type = 'character', 
               help="Grouping variable(s) in meta.data object separated by colon",
-              default = 'sample')
+              default = 'sample'),
+    make_option(c("-a", "--scaNet.folder"), type = 'character',
+              help="Path to scaNet data folder", default='')
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
@@ -72,7 +77,13 @@ rows_to_remove <- sample(nrow(dummy_scaNet_data), num_rows_to_remove, replace = 
 dummy_scaNet_data <- dummy_scaNet_data[-rows_to_remove, ]
 
 # TODO: Load correct ScaNet data
-fn$x$links$existsInScanet <- do.call(paste0, network_data[,1:2]) %in% do.call(paste0, dummy_scaNet_data)
+scaNet_arm_expr <- read.table(paste(opt$scaNet.folder, "M1_Arm_GRN.csv", sep = "/"), sep = ",", header = TRUE)[, 2:3]
+# # scaNet_arm_expr$condition <- "Arm"
+scaNet_doc_expr <- read.table(paste(opt$scaNet.folder, "M1_Doc_GRN.csv", sep = "/"), sep = ",", header = TRUE)[, 2:3]
+# scaNet_doc_expr$condition <- "Doc"
+scaNet_data <- rbind(scaNet_arm_expr, scaNet_doc_expr)
+
+fn$x$links$existsInScanet <- do.call(paste0, network_data[,1:2]) %in% do.call(paste0, scaNet_data)
 
 ###########
 
@@ -102,8 +113,6 @@ adata <- readRDS(opt$seurat.file)
 adata <- adata$all
 opt$group.var<-strsplit(opt$group.var, ':')[[1]]
 Idents(adata)<- opt$group.var
-
-
 
 # opt$selection <- strsplit(opt$selection, "-")[[1]]
 # opt$group.var <- strsplit(opt$group.var, ':')[[1]]
@@ -144,87 +153,172 @@ Idents(adata)<- opt$group.var
 # markers <- FindMarkers(subset_seurat_object, ident.1="1", ident.2="2") 
 ###########
 # Shiny app UI and server logic:
-ui <- shinyUI(
-  tabsetPanel(
-    tabPanel("Boostdiff Results",
-      fluidPage(
+ui <- 
+navbarPage(theme = shinytheme("cerulean"), title = "Results", 
+  tabPanel("Boostdiff Results",
+    sidebarLayout(
+      mainPanel(
         fluidRow(class="network",
-          column(6, 
-            # adding legend                
-            htmltools::div(
-              style = "padding: 10px; background-color: white;",
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-              sprintf("Stronger in %s (Activator)",conditions[1]),
-              htmltools::br(),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-              sprintf("Stronger in %s (Repressor)", conditions[1]),
-              htmltools::br(),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-              sprintf("Stronger in %s (Activator)", conditions[2]),
-              htmltools::br(),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-              htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-              sprintf("Stronger in %s (Repressor)", conditions[2]),
-              htmltools::br(),
-            ),
-            # adding DiffGRN
-            forceNetworkOutput("net"),
-            # adding Option switches
-            fluidRow(class="selection switches",
-              column(3,
-                materialSwitch(inputId = "geneCard_switch", label = "Enable GeneCard redirection", status = "danger", value = TRUE, right=TRUE),
-                materialSwitch(inputId = "scanet_switch", label = "Compare to Scanet results (Opaque edges are not found in Scanet)", status = "danger", right=TRUE),
-              ),
-              column(3,
-                selectInput(
-                  "selection_dropdown", 
-                  "Choose case for comparison:", 
-                  choices = c("NA", "Arm vs Doc D10 Spleen", "Arm vs Doc D28 Spleen", "Arm vs Doc D10 Liver", "Arm vs Doc D28 Liver"),
-                ),
-              ),
-              column(3,
-                pickerInput(
-                  inputId = "clusters_pick", 
-                  label = "Choose Clusters for comparison:", 
-                  choices = seq(1, 10), 
-                  options = pickerOptions(
-                    actionsBox = TRUE, 
-                    size = 10,
-                    selectedTextFormat = "count > 3"
-                  ), 
-                  multiple = TRUE
-                )
-              ),
-              column(2,
-                  actionButton("compare_button", "Compare plots!")
-              ),              
-            ),
-          ),               
-          column(3,
-            fluidRow(class = "table row",
-              plotOutput("violin_plot")),
-            fluidRow(class = "table row",
-              plotOutput("linear_model_plot")),
+          # adding legend                
+          htmltools::div(
+            style = "padding: 10px; background-color: white;",
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+            sprintf("Stronger in %s (Activator)",conditions[1]),
+            htmltools::br(),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+            sprintf("Stronger in %s (Repressor)", conditions[1]),
+            htmltools::br(),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+            sprintf("Stronger in %s (Activator)", conditions[2]),
+            htmltools::br(),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+            sprintf("Stronger in %s (Repressor)", conditions[2]),
+            htmltools::br(),
           ),
-          column(3,
-            fluidRow(class = "table row",
-              plotOutput("comparison_violin_plot")),
-            fluidRow(class = "table row",
-              plotOutput("comparison_linear_model_plot")),
-          ),
+          # adding DiffGRN
+          forceNetworkOutput("net"),
         ),
+          # adding Option switches
+        fluidRow(class="selection switches",
+          column(3,
+            materialSwitch(inputId = "geneCard_switch", label = "Enable GeneCard redirection", status = "danger", value = TRUE, right=TRUE),
+            materialSwitch(inputId = "scanet_switch", label = "Compare to Scanet results (Opaque edges are not found in Scanet)", status = "danger", right=TRUE),
+          ),
+          column(3,
+            selectInput(
+              "selection_dropdown", 
+              "Choose case for comparison:", 
+              choices = c("NA", "Arm vs Doc D10 Spleen", "Arm vs Doc D28 Spleen", "Arm vs Doc D10 Liver", "Arm vs Doc D28 Liver"),
+            )
+          ),
+          column(3,
+            pickerInput(
+              inputId = "clusters_pick", 
+              label = "Choose Clusters for comparison:", 
+              choices = seq(1, 10), 
+              options = pickerOptions(
+                actionsBox = TRUE, 
+                size = 10,
+                selectedTextFormat = "count > 3"
+              ), 
+              multiple = TRUE
+            )
+          ),
+          column(2,
+              actionButton("compare_button", "Compare plots!") %>% # does not currently work
+                helper(
+                  type = "inline",
+                  title = "Plot",
+                  content = c("This is a <b>plot</b>.",
+                              "This is on a new line."))
+          ),              
+        ),
+        width = 6
       ),
+      sidebarPanel(
+        fluidRow(
+          column(6, plotOutput("violin_plot")),
+          column(6, plotOutput("linear_model_plot")),
+        ),
+        fluidRow(
+          column(6, plotOutput("comparison_violin_plot")),      
+          column(6, plotOutput("comparison_linear_model_plot")),
+        ),
+        width = 6
+      ), 
     ),
-    tabPanel("Seurat Object Analysis",       
-      h2("Seurat Object Analysis")
-    )
-  )
+  ),
+  tabPanel("Seurat Object Analysis", 
+    h2("Seurat Object Analysis")
+  ),
 )
+
+
+
+
+        # fluidRow(class="network",
+        #   column(6, 
+        #     # adding legend                
+        #     htmltools::div(
+        #       style = "padding: 10px; background-color: white;",
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+        #       sprintf("Stronger in %s (Activator)",conditions[1]),
+        #       htmltools::br(),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+        #       sprintf("Stronger in %s (Repressor)", conditions[1]),
+        #       htmltools::br(),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+        #       sprintf("Stronger in %s (Activator)", conditions[2]),
+        #       htmltools::br(),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+        #       htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+        #       sprintf("Stronger in %s (Repressor)", conditions[2]),
+        #       htmltools::br(),
+        #     ),
+        #     # adding DiffGRN
+        #     forceNetworkOutput("net"),
+        #     # adding Option switches
+        #     fluidRow(class="selection switches",
+        #       column(3,
+        #         materialSwitch(inputId = "geneCard_switch", label = "Enable GeneCard redirection", status = "danger", value = TRUE, right=TRUE),
+        #         materialSwitch(inputId = "scanet_switch", label = "Compare to Scanet results (Opaque edges are not found in Scanet)", status = "danger", right=TRUE),
+        #       ),
+        #       column(3,
+        #         selectInput(
+        #           "selection_dropdown", 
+        #           "Choose case for comparison:", 
+        #           choices = c("NA", "Arm vs Doc D10 Spleen", "Arm vs Doc D28 Spleen", "Arm vs Doc D10 Liver", "Arm vs Doc D28 Liver"),
+        #         ),
+        #       ),
+        #       column(3,
+        #         pickerInput(
+        #           inputId = "clusters_pick", 
+        #           label = "Choose Clusters for comparison:", 
+        #           choices = seq(1, 10), 
+        #           options = pickerOptions(
+        #             actionsBox = TRUE, 
+        #             size = 10,
+        #             selectedTextFormat = "count > 3"
+        #           ), 
+        #           multiple = TRUE
+        #         )
+        #       ),
+        #       column(2,
+        #           actionButton("compare_button", "Compare plots!")
+        #       ),              
+        #     ),
+        #   ),               
+    #       column(3,
+    #         fluidRow(class = "table row",
+    #           plotOutput("violin_plot")),
+    #         fluidRow(class = "table row",
+    #           plotOutput("linear_model_plot")),
+    #       ),
+    #       column(3,
+    #         fluidRow(class = "table row",
+    #           plotOutput("comparison_violin_plot")),
+    #         fluidRow(class = "table row",
+    #           plotOutput("comparison_linear_model_plot")),
+    #       ),
+    #     ),
+    #   ),
+#     ),
+#     tabPanel("Seurat Object Analysis",       
+#       h2("Seurat Object Analysis")
+#     )
+#   ))
+# )
 
 server <- function(input, output) {
   # The forcenetwork needs to be a reactive value to change the node/link values
@@ -282,53 +376,64 @@ server <- function(input, output) {
     )
   )
 
-  # render Gene expression plot of the force network
-  output$violin_plot <- renderPlot({
-    expr1 <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_node, -1])
-    expr2 <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_node, -1])
-
+  plot_linear_model <- function(x, y, conditions, title) {
     df <- data.frame(
-      condition = c(rep(gexp_condition_names[1], length(expr1)), rep(gexp_condition_names[2], length(expr2))),
-      gexpr = c(expr1, expr2)
+      x = x,
+      y = y,
+      condition = conditions
     )
-    plot <- ggplot(df, aes(x=condition, y=gexpr, fill=condition)) +
-    geom_violin() +
-      scale_fill_manual(values=colors) +
-      ggtitle(input$id_node) + theme(plot.title = element_text(hjust = 0.5)) +
+
+    plot <- ggplot(df, aes(x = x, y = y, colour = condition)) +
+      geom_point() +
+      scale_colour_manual(values = colors) +
+      geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) + 
+      ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
+
+    plot <- plot + theme_classic()
+    return(plot)
+  }
+
+  plot_violin_plot <- function(expr_data, conditions, title) {
+    df <- data.frame(
+      gexpr = expr_data,
+      condition = conditions
+    )
+
+     plot <- ggplot(df, aes(x = condition, y = gexpr, fill = condition)) +
+      geom_violin() +
+      scale_fill_manual(values = colors) +
+      ggtitle(title) + theme(plot.title = element_text(hjust = 0.5)) +
       xlab("Condition") +
       ylab("Gene expression") 
     # Idea: "save plot switch -> saves all plots that you select"
     # ggsave(filename = "dnjac15_gene_expression_plot.png", plot = plot, width = 6, height = 4, dpi = 300)
 
-    plot
-
+    plot <- plot + theme_classic()
+    return(plot)
+  }
+  # render Gene expression plot of the force network
+  output$violin_plot <- renderPlot({
+    expr1 <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_node, -1])
+    expr2 <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_node, -1])
+    expr_data <- c(expr1, expr2)
+    conditions <- c(rep(gexp_condition_names[1], length(expr1)), rep(gexp_condition_names[2], length(expr2)))
+    title <- sprintf("%s || %s vs %s", input$id_node, gexp_condition_names[1], gexp_condition_names[2])
+    
+    plot_violin_plot(expr_data, conditions, title)
   }) 
 
   # render linear model plot of the force network
-  output$linear_model_plot <- renderPlot({
+  output$linear_model_plot <- renderPlot({    
     expr1_x <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_source, -1])    
     expr1_y <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_target, -1])    
-
     expr2_x <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_source, -1])    
     expr2_y <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_target, -1])
+    x <- c(expr1_x, expr2_x)
+    y <- c(expr1_y, expr2_y)
+    conditions <- c(rep(gexp_condition_names[1], length(expr1_x)), rep(gexp_condition_names[2], length(expr2_x)))
+    title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, gexp_condition_names[1], gexp_condition_names[2])
 
-    coef_cond1 <- coefficients(lm(expr1_y ~ expr1_x))
-    coef_cond2 <- coefficients(lm(expr2_y ~ expr2_x))
-
-    df <- data.frame(
-      x = c(expr1_x, expr2_x),
-      y = c(expr1_y, expr2_y),
-      condition = c(rep(gexp_condition_names[1], length(expr1_x)), rep(gexp_condition_names[2], length(expr2_x)))
-    )
-    plot <- ggplot(df, aes(x=x, y=y, colour=condition)) +
-      geom_point() +
-      scale_colour_manual(values=colors) +
-      geom_smooth(method="lm", formula = "y ~ x", se = FALSE) + 
-      ggtitle(sprintf("Edge %s -> %s", input$id_source, input$id_target)) + theme(plot.title = element_text(hjust = 0.5))
-   
-    # ggsave(filename = "dnjac15_tox_edge_linear_model.png", plot = plot, width = 6, height = 4, dpi = 300)
-
-    plot
+    plot_linear_model(x, y, conditions, title)
   })
 
   comparison_data <- reactiveValues(arm_data = NULL, doc_data = NULL, condition_names = NULL)
@@ -417,66 +522,33 @@ server <- function(input, output) {
   })  
 
   output$comparison_violin_plot <- renderPlot({
-    testing <- input$id_node
     if(!is.null(comparison_data$arm_data)) {
-      if (!(input$id_node %in% comparison_data$doc_data$Gene)) {
-        title <- paste(input$id_node, " not found in comparison dataset")
-      }else {
-        title <- input$id_node
-      }
-      
       expr1 <- as.numeric(comparison_data$doc_data[Gene == input$id_node, -1])
       expr2 <- as.numeric(comparison_data$arm_data[Gene == input$id_node, -1])
+      expr_data <- c(expr1, expr2)
+      conditions <- c(rep(comparison_data$condition_names[1], length(expr1)), rep(comparison_data$condition_names[2], length(expr2)))
+      condition_names <- sort(comparison_data$condition_names, decreasing = FALSE) # just to get the same order of conditions names in the title
+      title <- sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2])
 
-      df <- data.frame(
-        condition = c(rep(comparison_data$condition_names[1], length(expr1)), rep(comparison_data$condition_names[2], length(expr2))),
-        gexpr = c(expr1, expr2)
-      )
-      plot <- ggplot(df, aes(x=condition, y=gexpr, fill=condition)) +
-      geom_violin() +
-        scale_fill_manual(values=colors) +
-        ggtitle(title) + theme(plot.title = element_text(hjust = 0.5)) +
-        xlab("Condition") +
-        ylab("Gene expression") 
-      # Idea: "save plot switch -> saves all plots that you select"
-      # ggsave(filename = "dnjac15_gene_expression_plot.png", plot = plot, width = 6, height = 4, dpi = 300)
-
-      plot
+      plot_violin_plot(expr_data, conditions, title)
     }
   })
 
-    output$comparison_linear_model_plot <- renderPlot({
-      if(!is.null(comparison_data$arm_data)) {
-        if (!(input$id_source %in% comparison_data$doc_data$Gene) || !(input$id_target %in% comparison_data$doc_data$Gene)) {
-          title <- "Source or target not found in comparison dataset"
-        } else {
-          title <- sprintf("Edge %s -> %s", input$id_source, input$id_target)
-        }
-        expr1_x <- as.numeric(comparison_data$doc_data[Gene == input$id_source, -1])    
-        expr1_y <- as.numeric(comparison_data$doc_data[Gene == input$id_target, -1])    
+  output$comparison_linear_model_plot <- renderPlot({
+    if(!is.null(comparison_data$arm_data)) {
+      expr1_x <- as.numeric(comparison_data$doc_data[Gene == input$id_source, -1])    
+      expr1_y <- as.numeric(comparison_data$doc_data[Gene == input$id_target, -1])    
+      expr2_x <- as.numeric(comparison_data$arm_data[Gene == input$id_source, -1])    
+      expr2_y <- as.numeric(comparison_data$arm_data[Gene == input$id_target, -1])
+      x <- c(expr1_x, expr2_x)
+      y <- c(expr1_y, expr2_y)
+      conditions <- c(rep(comparison_data$condition_names[1], length(expr1_x)), rep(comparison_data$condition_names[2], length(expr2_x)))
+      condition_names <- sort(comparison_data$condition_names, decreasing = FALSE) # just to get the same order of conditions names in the title
+      title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, condition_names[1], condition_names[2])
 
-        expr2_x <- as.numeric(comparison_data$arm_data[Gene == input$id_source, -1])    
-        expr2_y <- as.numeric(comparison_data$arm_data[Gene == input$id_target, -1])
-
-        coef_cond1 <- coefficients(lm(expr1_y ~ expr1_x))
-        coef_cond2 <- coefficients(lm(expr2_y ~ expr2_x))
-
-        df <- data.frame(
-          x = c(expr1_x, expr2_x),
-          y = c(expr1_y, expr2_y),
-          condition = c(rep(comparison_data$condition_names[1], length(expr1_x)), rep(comparison_data$condition_names[2], length(expr2_x)))
-        )
-        plot <- ggplot(df, aes(x=x, y=y, colour=condition)) +
-          geom_point() +
-          scale_colour_manual(values=colors) +
-          geom_smooth(method="lm", formula = "y ~ x", se = FALSE) + 
-          ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
-      
-        # ggsave(filename = "dnjac15_tox_edge_linear_model.png", plot = plot, width = 6, height = 4, dpi = 300)
-
-        plot
-      }
-    })
+      plot_linear_model(x, y, conditions, title)
+    }
+  })
 
   # rendering Seurat diffexp test plot
   # output$diff_exp_table <- renderDT(
