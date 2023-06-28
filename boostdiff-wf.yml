@@ -25,3 +25,5 @@ dependencies:
   - r-networkd3
   - r-shinywidgets
   - r-dt
+  - r-shinythemes
+  - r-shinyhelper

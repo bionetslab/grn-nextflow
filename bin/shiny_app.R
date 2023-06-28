@@ -211,12 +211,11 @@ navbarPage(theme = shinytheme("cerulean"), title = "Results",
             )
           ),
           column(2,
-              actionButton("compare_button", "Compare plots!") %>% # does not currently work
-                helper(
-                  type = "inline",
-                  title = "Plot",
-                  content = c("This is a <b>plot</b>.",
-                              "This is on a new line."))
+              helper(
+                actionButton("compare_button", "Compare plots!"),
+                type = "markdown",
+                content = "Clickhelp"
+              )
           ),              
         ),
         width = 6
@@ -321,6 +320,7 @@ navbarPage(theme = shinytheme("cerulean"), title = "Results",
 # )
 
 server <- function(input, output) {
+  observe_helpers(withMathJax = TRUE)
   # The forcenetwork needs to be a reactive value to change the node/link values
   network <- reactiveValues(fn = fn)
   # Observer event for the geneCard switch
