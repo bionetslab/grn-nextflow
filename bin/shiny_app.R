@@ -19,6 +19,7 @@ library(data.table)
 library(shinythemes)
 library(shinyhelper)
 library(dplyr)
+library(cowplot)
 ################################################################################
 
 option_list <- list(
@@ -134,45 +135,7 @@ Idents(adata)<-opt$group.var
 
 #### ADD SOME CONVENIENCE VARIABLES
 factor_groups<-names(which(sapply(adata@meta.data, class)=='factor'))
-# print(factor_groups)
-
-# opt$selection <- strsplit(opt$selection, "-")[[1]]
-# opt$group.var <- strsplit(opt$group.var, ':')[[1]]
-# Idents(adata_tmp)<- opt$group.var
-
-# cell_subsets <- c()
-# subset_seurat_object <- NULL
-# # select the correct cells
-# for (selection in opt$selection) {
-#   criteria <- strsplit(selection, ",")[[1]]
-#   index <- length(criteria) - 4 # not the cluster.ids, cluster.name, outputfolder or key
-#   selec <- criteria[1:index] 
-#   selec <- unname(sapply(selec, function(x) strsplit(x ,":")))
-#   # key <- criteria[length(criteria) - 3]
-#   cluster.ids <- strsplit(criteria[length(criteria)], ":")[[1]]
-#   cluster.name <- criteria[length(criteria)-1]
-
-#   for (g in 1:length(selec)){
-#     # Create a subset of the required data
-#     select.cells <- list()
-#     # first criterion
-#     select.cells <- which(adata_tmp@meta.data[, opt$group.var[1]]==selec[[g]][1])
-#     # select metadata categories
-#     for (i in 2:length(opt$group.var)){
-#       select.cells <- intersect(select.cells, which(adata_tmp@meta.data[, opt$group.var[i]]==selec[[g]][i]))
-#     }
-
-#     # select clusters (multiple)
-#     select.cells<-intersect(select.cells, which(adata_tmp@meta.data[, cluster.name] %in% as.numeric(cluster.ids)))
-#     cell_subsets <- c(cell_subsets, select.cells)
-
-#   }
-# }      
-
-# subset_seurat_object <- subset(adata, cells = cell_subsets)
-
-# # perform differential testing
-# markers <- FindMarkers(subset_seurat_object, ident.1="1", ident.2="2") 
+# print(factor_groups) 
 ###########
 
 ui <- 
@@ -441,6 +404,9 @@ server <- function(input, output, session) {
       y = y,
       condition = conditions
     )
+    if (sum(is.na(df)) > 0.9 * nrow(df)) { # dont plot anything if there are more than 90% NA values in the dataframe
+      return(NULL)
+    }
     # print(df)
     plot <- ggplot(df, aes(x = x, y = y, colour = condition)) +
       geom_point() +
@@ -460,19 +426,23 @@ server <- function(input, output, session) {
     return(plot)
   }
   
-  # render Gene expression plot of the force network
+
+  # Violin and linear model plot for the shown DiffGRN
   output$violin_plot <- renderPlot({
     if (is.null(input$id_node)) {
+      print("Select a node!")
       return(NULL)
     }
     Idents(adata)<-'group' # TODO this is hardcoded potentially problematic
     condition_names<-sapply(gexp_condition_names, function(x) gsub(pattern = '_', replacement = ' ', x))
-    VlnPlot(adata, features = isolate(input$id_node), idents = condition_names, cols = colors, y.max=4)
+    plot<-VlnPlot(adata, features = isolate(input$id_node), idents = condition_names, cols = colors, y.max=4)
+    output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
+    plot
   })
 
-  # render linear model plot of the force network
   output$linear_model_plot <- renderPlot({    
     if (is.null(input$id_source)) {
+      print("Select an edge!")
       return(NULL)
     }
     expr1_x <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_source, -1])    
@@ -490,9 +460,15 @@ server <- function(input, output, session) {
     plot
   })
   
+
   ### Comparison Plots ###
   output$comparison_violin_plot <- renderPlot({
-    if (is.null(input$id_node) || is.null(input$selection_dropdown) || is.null(input$clusters_pick)) { # only plot if all three values are set
+    if (is.null(input$id_node) || 
+        is.null(input$selection_dropdown) || 
+        is.null(input$clusters_pick) ||
+        length(input$selection_dropdown) < 2 
+    ) { # only plot if all three values are set and atleast 2 cases are selected
+      print("Select a node, two cases in the selection dropdown menu and atleast one cluster!")
       return(NULL)
     }
     input$compare_button
@@ -504,12 +480,19 @@ server <- function(input, output, session) {
     condition_names <- sort(condition_names, decreasing=FALSE)
     cols <- colors
     names(cols) <- c(gsub(pattern = '_', replacement = ' ',  condition_names[1]), gsub(pattern = '_', replacement = ' ',  condition_names[2])) 
-    VlnPlot(asub, features = isolate(input$id_node), idents = condition_names, cols = cols, y.max=4)
-    
+    plot <- VlnPlot(asub, features = isolate(input$id_node), idents = condition_names, cols = cols, y.max=4)
+    output$downloadComparisonViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
+    plot
   })
   
+
   output$comparison_linear_model_plot <- renderPlot({
-    if (is.null(input$id_source) || is.null(input$selection_dropdown) || is.null(input$clusters_pick)) { # only plot if all three values are set
+    if (is.null(input$id_source) || 
+        is.null(input$selection_dropdown) || 
+        is.null(input$clusters_pick) ||
+        length(input$selection_dropdown) < 2 
+    ) { # only plot if all three values are set
+      print("Select an edge, two cases in the selection dropdown menu and atleast one cluster!")
       return(NULL)
     }
     input$compare_button
@@ -527,12 +510,10 @@ server <- function(input, output, session) {
     }
     # print(selection)
     
-    
     clusters <- isolate(input$clusters_pick)
     cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
     n.samples <- 30           # TODO: Same as line above, make it flexible (also hardcoded in boostdiff.nf), however does not break as line above if not flexible and changed
     p.missing <- 10           # Hardcoded in create_metacells.R (not set in boostdiff.nf) 
-    
     
     # print(clusters)
     for (s in selection) {
@@ -599,7 +580,6 @@ server <- function(input, output, session) {
     expr2_x <- as.numeric(arm_data[Gene == isolate(input$id_source), -1])    
     expr2_y <- as.numeric(arm_data[Gene == isolate(input$id_target), -1])
     
-    
     x <- c(expr1_x, expr2_x)
     y <- c(expr1_y, expr2_y)
     conditions <- c(rep(condition_names[1], length(expr1_x)), rep(condition_names[2], length(expr2_x)))
@@ -611,14 +591,28 @@ server <- function(input, output, session) {
     output$downloadComparisonLinearModelPlot <- download_plot(plot, title)
     plot
   })
-    
+
+  download_plot <- function(plot, filename) {
+    downloadHandler(
+      filename = function() {
+        sprintf("%s.png", filename) # Filename for the downloaded plot
+      },
+      content = function(file) {
+        # Save the plot as a file
+        ggsave(file, plot = plot)
+      }
+    )
+  }    
   ##########################
   output$umap_plot<-renderPlot({
     FeaturePlot(adata, features = input$select_genes, ncol=6)
   })
   
   output$standard_violin_plot<-renderPlot({
-    VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6)
+    # Seurat's VlnPlot does not show the legend if more than one gene is plotted (see https://github.com/satijalab/seurat/issues/2598) -> using cowplot's plot_grid with list of violin plots
+    plots <- VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6, combine=FALSE)
+    do.call(plot_grid, plots)
+    # VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6)
   })
   
   output$dot_plot<-renderPlot({
@@ -637,22 +631,6 @@ server <- function(input, output, session) {
                       choices = rownames(adata),
                       selected = selection)
   })
-
-  download_plot <- function(plotting_function, filename) {
-    downloadHandler(
-      filename = function() {
-        sprintf("%s.png", title) # Filename for the downloaded plot
-      },
-      content = function(file) {
-        # Save the plot as a file
-        ggsave(file, plot = plotting_function())
-      }
-    )
-  }
-
-  output$downloadGRNViolinPlot <- download_plot(violinPlot_data_for_displayed_GRN, "testing_1")
-  output$downloadComparisonViolinPlot <- download_plot(violinPlot_data_for_comparison, "testing_2")
-
   ##########################
 }
 
