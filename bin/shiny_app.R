@@ -5,11 +5,13 @@
 # Order of imports is important here.
 # Seurat must be imported before networkD3 and htmlwidgets.
 # Otherwise, the JS function of these libraries will be masked and this leads to errors
+# renv::activate('/home/bionets-og86asub/Documents/netmap/')
+
 library(Seurat)
 library(shiny)
 library(ggplot2)
 library(networkD3)
-library(htmlwidgets)
+#(htmlwidgets)
 library(optparse)
 library(shinyWidgets)
 library(DT)
@@ -20,22 +22,32 @@ library(dplyr)
 ################################################################################
 
 option_list <- list(
-    make_option(c("-n", "--network.file"), type = 'character',
-                default='', help="Network data file"),
-    make_option(c("-s", "--selection"), type = 'character',
-                default='', help="selection (hardcoded parameter in boostdiff.nf)"),
-    make_option(c("-c", "--metaCells_condition1.file"), type = 'character',
+  make_option(c("-n", "--network.file"), type = 'character',
+              default='', help="Network data file"),
+  make_option(c("-s", "--selection"), type = 'character',
+              default='', help="selection (hardcoded parameter in boostdiff.nf)"),
+  make_option(c("-c", "--metaCells_condition1.file"), type = 'character',
               default='', help="Gene expression file of meta cells of condition 1"),
-    make_option(c("-d", "--metaCells_condition2.file"), type = 'character',
+  make_option(c("-d", "--metaCells_condition2.file"), type = 'character',
               default='', help="Gene expression file of of meta cells of condition 2"),
-    make_option(c("-f", "--seurat.file"), type = 'character',
-                default='', help="Path to Seurat file"),
-    make_option(c("-g", "--group.var"), type = 'character', 
+  make_option(c("-f", "--seurat.file"), type = 'character',
+              default='', help="Path to Seurat file"),
+  make_option(c("-g", "--group.var"), type = 'character', 
               help="Grouping variable(s) in meta.data object separated by colon",
               default = 'sample'),
     make_option(c("-a", "--assay"), type = 'character',
               help = "Assay to use", default = 'SCT'))
 opt <- parse_args(OptionParser(option_list=option_list))
+
+
+# opt$network.file<- '/home/bionets-og86asub/Documents/netmap/workflows/results/Arm_vs_Doc_D28:Spleen/aggregated_filtered_network.txt' 
+# opt$metaCells_condition1.file<- '/home/bionets-og86asub/Documents/netmap/workflows/results/Arm_vs_Doc_D28:Spleen/out_Doc_Spleen_d28.tsv' 
+# opt$metaCells_condition2.file<- '/home/bionets-og86asub/Documents/netmap/workflows/results/Arm_vs_Doc_D28:Spleen/out_Arm_Spleen_d28.tsv' 
+# opt$seurat.file<-'/home/bionets-og86asub/Documents/netmap/data/misc/seurat_cd4_micro.rds'
+# opt$group.var<-'infection:tissue:subject:time' 
+# opt$selection<- 'Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28,Doc_Spleen_d28,Arm_vs_Doc_D28:Spleen,cluster,1:2-Arm:Spleen:1:d28,Arm:Spleen:3:d28,Arm:Spleen:5:d28,Arm_Spleen_d28,Arm_vs_Doc_D28:Spleen,cluster,1:2' 
+# opt$scaNet.folder<-'/home/bionets-og86asub/Documents/netmap/workflows/scaNet_data'
+
 
 ########### Creating force directed network
 # Loading differential network
@@ -47,21 +59,22 @@ nodes$id = seq(0, nrow(nodes)-1)
 # replacing node names with numeric values in links for plotting function
 i <- 0
 for(node in nodes$name) {
-    links$source[links$source == node] = i
-    links$target[links$target == node] = i
-    i <- i + 1
+  links$source[links$source == node] = i
+  links$target[links$target == node] = i
+  i <- i + 1
 }
 
 network <- list(links = links, nodes = nodes)
 colors <- c("#cc79a7", "#009e73")
+
 conditions <- sort(unique(network_data$condition), decreasing = FALSE) # sorting to get matching colours with matching conditions for all plots
 network_data$condition <- ifelse(network_data$condition == conditions[1], colors[1], network_data$condition)
 network_data$condition <- ifelse(network_data$condition == conditions[2], colors[2], network_data$condition)
 
 fn <- forceNetwork(Links = network$links, Nodes = network$nodes, 
-             Source = 'source', Target = 'target', 
-             NodeID = 'name', Group = 'group', Value="width", opacity = 1, arrows=TRUE, 
-             linkColour=network_data$condition, opacityNoHover = 0.6, zoom=TRUE, colourScale = JS('d3.scaleOrdinal().domain(["1"]).range(["#000000"])'))
+                   Source = 'source', Target = 'target', 
+                   NodeID = 'name', Group = 'group', Value="width", opacity = 1, arrows=TRUE, 
+                   linkColour=network_data$condition, opacityNoHover = 0.6, zoom=TRUE, colourScale = JS('d3.scaleOrdinal().domain(["1"]).range(["#000000"])'))
 
 # adding switch information to access it later on
 fn$x$nodes$geneCard_switch <- FALSE
@@ -89,13 +102,15 @@ fn$x$links$effect <- network_data[,5]
 ########### Loading the necessary tsv files for the gene expression violin plot and the linear model plot of the forcenetwork (done separately from the seurat object because bulking is random)
 # reading in gene expression
 # gexp_condition1_name <- tail(unlist(strsplit(opt$gexp_condition1.file, "/")), n=1) # removing .tsv
-gexp_condition1_name <- substr(opt$metaCells_condition1.file, 1, nchar(opt$metaCells_condition1.file) - 4) # removing .tsv
-gexp_condition1_name <- substr(gexp_condition1_name, 5, nchar(gexp_condition1_name))
 
-# gexp_condition2_name <- tail(unlist(strsplit(opt$gexp_condition2.file, "/")), n=1) 
-gexp_condition2_name <- substr(opt$metaCells_condition2.file, 1, nchar(opt$metaCells_condition2.file) - 4) # removing .tsv
-gexp_condition2_name <- substr(gexp_condition2_name, 5, nchar(gexp_condition2_name)) # removing _out
+gexp_condition1_name <- gsub(basename(opt$metaCells_condition1.file), pattern="\\.tsv$|\\.csv)", replacement="")
+gexp_condition1_name <- gsub(gexp_condition1_name, pattern="^out_", replacement="")
 
+gexp_condition2_name <- gsub(basename(opt$metaCells_condition2.file), pattern="\\.tsv$|\\.csv)", replacement="")
+gexp_condition2_name <- gsub(gexp_condition2_name, pattern="^out_", replacement="")
+
+
+names(colors)<-c(gsub(pattern = '_', replacement = ' ',  gexp_condition2_name), gsub(pattern = '_', replacement = ' ',  gexp_condition1_name))
 
 gexp_condition_names <- sort(c(gexp_condition1_name, gexp_condition2_name), decreasing = FALSE) # just to get the matching ordering with matching colours :)
 if (gexp_condition_names[1] == gexp_condition1_name) {  
@@ -110,8 +125,16 @@ if (gexp_condition_names[1] == gexp_condition1_name) {
 ########### Loading Seurat object, filtering the correct cells and performing differential testing
 adata <- readRDS(opt$seurat.file)
 adata <- adata$all
+
+# Set grouping var to Armstrong vs Docile
 opt$group.var<-strsplit(opt$group.var, ':')[[1]]
-Idents(adata)<- opt$group.var
+
+Idents(adata)<-opt$group.var
+
+
+#### ADD SOME CONVENIENCE VARIABLES
+factor_groups<-names(which(sapply(adata@meta.data, class)=='factor'))
+# print(factor_groups)
 
 # opt$selection <- strsplit(opt$selection, "-")[[1]]
 # opt$group.var <- strsplit(opt$group.var, ':')[[1]]
@@ -153,122 +176,174 @@ Idents(adata)<- opt$group.var
 ###########
 
 ui <- 
-navbarPage(theme = shinytheme("cerulean"), title = "Results", 
-  tabPanel("Boostdiff Results",
-    sidebarLayout(
-      mainPanel(
-        fluidRow(class="network",
-          # adding legend                
-          htmltools::div(
-            style = "padding: 10px; background-color: white;",
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-            sprintf("Stronger in %s (Activator)",conditions[1]),
-            htmltools::br(),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-            sprintf("Stronger in %s (Repressor)", conditions[1]),
-            htmltools::br(),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-            sprintf("Stronger in %s (Activator)", conditions[2]),
-            htmltools::br(),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-            htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-            sprintf("Stronger in %s (Repressor)", conditions[2]),
-            htmltools::br(),
-          ),
-          # adding DiffGRN
-          forceNetworkOutput("net"),
-        ),
-          # adding Option switches
-        fluidRow(class="selection switches",
-          column(3,
-            checkboxInput(inputId = "geneCard_switch", label = "Enable GeneCard redirection", value = FALSE),
-            helper(
-              fileInput('comparison_grn_file', 'Choose GRN to compare to',
-                accept = c(
-                  'text/csv',
-                  'text/comma-separated-values',
-                  '.csv'
-                )
-              ),
-              type = "inline",
-              content = c("You can upload a GRN (column 1: Source genes, column 2: Target genes) as a csv file for comparison to this DiffGRN.",
-                          "By clicking on either of the checkboxes below the upload you can compare the nodes or the edges.",
-                          "Opaque nodes/edges are NOT contained in the uploaded GRN.")
-            ),
-            checkboxInput(inputId = "comparison_grn_switch_nodes", label = "Compare nodes to uploaded file", value = FALSE),
-            checkboxInput(inputId = "comparison_grn_switch_edges", label = "Compare edges to uploaded file", value = FALSE)
-          ),
-          column(3,
-            selectInput(
-              "selection_dropdown", 
-              "Choose case for comparison:", 
-              choices = c("NA", "Arm vs Doc D10 Spleen", "Arm vs Doc D28 Spleen", "Arm vs Doc D10 Liver", "Arm vs Doc D28 Liver"),
-            ),
-            pickerInput(
-              inputId = "clusters_pick", 
-              label = "Choose Clusters for comparison:", 
-              choices = seq(1, 10), 
-              options = pickerOptions(
-                actionsBox = TRUE, 
-                size = 10,
-                selectedTextFormat = "count > 3"
-              ), 
-              multiple = TRUE
-            ),
-            helper(
-              actionButton("compare_button", "Compare plots!"),
-              type = "inline",
-              content = c(
-                "How to compare these results to a different case:",
-                "1. Select a case for comparison. Availabe comparison cases are:",
-                "* Armstrong vs. Docile, Spleen, day 10",
-                "* Armstrong vs. Docile, Spleen, day 28",
-                "* Armstrong vs. Docile, Liver, day 10",
-                "* Armstrong vs. Docile, Liver, day 28",
-                "2. Select the cell clusters of the dataset to use:",
-                "* Standard: cluster 1, 2"
-              )
-            ),  
-          ),            
-        ),
-        width = 6
-      ),
-      sidebarPanel(
-        fluidRow(
-          column(6, 
-            plotOutput("violin_plot"),
-            downloadButton("downloadGRNViolinPlot", "Download Plot")
-          ),
-          column(6, 
-            plotOutput("linear_model_plot"),
-            downloadButton("downloadGRNLinearModelPlot", "Download Plot")
-            ),
-        ),
-        fluidRow(
-          column(6, 
-            plotOutput("comparison_violin_plot"),
-            downloadButton("downloadComparisonViolinPlot", "Download Plot")
-            ),      
-          column(6, 
-            plotOutput("comparison_linear_model_plot"),
-            downloadButton("downloadComparisonLinearModelPlot", "Download Plot")
-            ),
-        ),
-        width = 6
-      ), 
-    ),
-  ),
-  tabPanel("Seurat Object Analysis", 
-    h2("Seurat Object Analysis")
+  navbarPage(theme = shinytheme("cerulean"), title = "Results", 
+             tabPanel("Boostdiff Results",
+                      sidebarLayout(
+                        mainPanel(
+                          fluidRow(class="network",
+                                   # adding legend                
+                                   htmltools::div(
+                                     style = "padding: 10px; background-color: white;",
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+                                     sprintf("Stronger in %s (Activator)",conditions[1]),
+                                     htmltools::br(),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+                                     sprintf("Stronger in %s (Repressor)", conditions[1]),
+                                     htmltools::br(),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+                                     sprintf("Stronger in %s (Activator)", conditions[2]),
+                                     htmltools::br(),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+                                     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+                                     sprintf("Stronger in %s (Repressor)", conditions[2]),
+                                     htmltools::br(),
+                                   ),
+                                   # adding DiffGRN
+                                   forceNetworkOutput("net"),
+                          ),
+                          # adding Option switches
+                          fluidRow(class="selection switches",
+                                    column(3,
+                                          checkboxInput(inputId = "geneCard_switch", label = "Enable GeneCard redirection", value = FALSE),
+                                          helper(
+                                            fileInput('comparison_grn_file', 'Choose GRN to compare to',
+                                              accept = c(
+                                                'text/csv',
+                                                'text/comma-separated-values',
+                                                '.csv'
+                                              )
+                                            ),
+                                            type = "inline",
+                                            content = c("You can upload a GRN (column 1: Source genes, column 2: Target genes) as a csv file for comparison to this DiffGRN.",
+                                                        "By clicking on either of the checkboxes below the upload you can compare the nodes or the edges.",
+                                                        "Opaque nodes/edges are NOT contained in the uploaded GRN.")
+                                          ),
+                                          checkboxInput(inputId = "comparison_grn_switch_nodes", label = "Compare nodes to uploaded file", value = FALSE),
+                                          checkboxInput(inputId = "comparison_grn_switch_edges", label = "Compare edges to uploaded file", value = FALSE)
+                                    ),
+                                    column(3,
+                                          selectizeInput(
+                                            "selection_dropdown",
+                                            label = "Choose 2 conditions to compare to.",
+                                            choices = unique(adata$group), ## Hardcoded change?
+                                            multiple = TRUE,
+                                            options = list(maxItems = 2)
+                                          ),
+                                          selectInput(
+                                            'clusters_pick',
+                                            "Choose Clusters for comparison:",
+                                            choices = unique(adata$cluster),
+                                            selected = NULL,
+                                            multiple = TRUE,
+                                            selectize = TRUE,
+                                            width = NULL,
+                                            size = NULL
+                                          ),
+                                          helper(
+                                            actionButton("compare_button", "Compare plots!"),
+                                            type = "inline",
+                                            content = c(
+                                              "How to compare these results to a different case:",
+                                              "1. Select a case for comparison. Availabe comparison cases are:",
+                                              "* Armstrong vs. Docile, Spleen, day 10",
+                                              "* Armstrong vs. Docile, Spleen, day 28",
+                                              "* Armstrong vs. Docile, Liver, day 10",
+                                              "* Armstrong vs. Docile, Liver, day 28",
+                                              "2. Select the cell clusters of the dataset to use:",
+                                              "* Standard: cluster 1, 2"
+                                            )
+                                          )
+                                      ),
+                          ),
+                          width = 6
+                        ),
+                        sidebarPanel(
+                          fluidRow(
+                            column(6, 
+                              plotOutput("violin_plot"),
+                              downloadButton("downloadGRNViolinPlot", "Download Plot")
+                            ),
+                            column(6, 
+                              plotOutput("linear_model_plot"),
+                              downloadButton("downloadGRNLinearModelPlot", "Download Plot")
+                              ),
+                          ),
+                          fluidRow(
+                            column(6, 
+                              plotOutput("comparison_violin_plot"),
+                              downloadButton("downloadComparisonViolinPlot", "Download Plot")
+                              ),      
+                            column(6, 
+                              plotOutput("comparison_linear_model_plot"),
+                              downloadButton("downloadComparisonLinearModelPlot", "Download Plot")
+                              ),
+                          ),
+                          width = 6
+                        ), 
+                      ),
+             ),
+             tabPanel("Seurat Object Analysis", 
+                      h2("Seurat Object Analysis"),
+                      sidebarLayout(
+                        sidebarPanel(
+                          selectInput(
+                            'select_genes',
+                            'Select Genes to display',
+                            rownames(adata),
+                            selected = NULL,
+                            multiple = TRUE,
+                            selectize = TRUE,
+                            width = NULL,
+                            size = NULL
+                          ),
+                          selectInput(
+                            'select_primary_grouping',
+                            'Select primary grouping variable',
+                            factor_groups,
+                            selected = adata@meta.data[1],
+                            multiple = FALSE,
+                            selectize = TRUE,
+                            width = NULL,
+                            size = NULL
+                          ),
+                          selectInput(
+                            'select_secondary_grouping',
+                            'Select secondary grouping variable',
+                            factor_groups,
+                            selected = adata@meta.data[1],
+                            multiple = FALSE,
+                            selectize = TRUE,
+                            width = NULL,
+                            size = NULL
+                          )
+                        ),
+                        mainPanel(
+                          tabsetPanel(type = 'tabs',
+                                      tabPanel('Umap',
+                                               fluidRow(12, 
+                                                        column(12, plotOutput("umap_plot")), 
+                                                        column(12, plotOutput('standard_violin_plot'))
+                                               )
+                                      ) ,
+                                      tabPanel('Dotplot',
+                                               fluidRow(12, 
+                                                        column(12, plotOutput("dot_plot"))
+                                               )
+                                      )      
+                          )
+                          
+                          
+                        )
+                      )
+             ),
   )
-)
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   observe_helpers(withMathJax = TRUE)
   # The forcenetwork needs to be a reactive value to change the node/link values
   network <- reactiveValues(fn = fn)
@@ -359,17 +434,17 @@ server <- function(input, output) {
       '
     )
   )
-
+  
   plot_linear_model <- function(x, y, conditions, title) {
     df <- data.frame(
       x = x,
       y = y,
       condition = conditions
     )
-
+    # print(df)
     plot <- ggplot(df, aes(x = x, y = y, colour = condition)) +
       geom_point() +
-      scale_colour_manual(values = colors) +
+      scale_colour_manual(values = unname(colors)) +
       geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) + 
       ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
 
@@ -384,55 +459,22 @@ server <- function(input, output) {
       scale_x_continuous(limits = c(0, 5.5)) + scale_y_continuous(limits = c(0, 5.5))
     return(plot)
   }
+  
+  # render Gene expression plot of the force network
+  output$violin_plot <- renderPlot({
+    if (is.null(input$id_node)) {
+      return(NULL)
+    }
+    Idents(adata)<-'group' # TODO this is hardcoded potentially problematic
+    condition_names<-sapply(gexp_condition_names, function(x) gsub(pattern = '_', replacement = ' ', x))
+    VlnPlot(adata, features = isolate(input$id_node), idents = condition_names, cols = colors, y.max=4)
+  })
 
-  plot_violin_plot <- function(expr_data, conditions, title) {
-    df <- data.frame(
-      gexpr = expr_data,
-      condition = conditions
-    )
-
-    plot <- ggplot(df, aes(x = condition, y = gexpr, fill = condition)) +
-      geom_violin() +
-      scale_fill_manual(values = colors) +
-      ggtitle(title) + theme(plot.title = element_text(hjust = 0.5)) +
-      xlab("Condition") +
-      ylab("Gene expression") 
-    # Idea: "save plot switch -> saves all plots that you select"
-    # ggsave(filename = "dnjac15_gene_expression_plot.png", plot = plot, width = 6, height = 4, dpi = 300)
-
-    plot <- plot + 
-      theme_classic() + 
-      theme(axis.title = element_text(size = 14), 
-            axis.text = element_text(size = 12),
-            legend.text = element_text(size = 12),
-            legend.title = element_text(size = 14),
-            plot.title = element_text(size = 16)) +
-      scale_y_continuous(limits = c(0, 6))
-    return(plot)
-  }
-
-  violinPlot_data_for_displayed_GRN <- function() {
-    expr1 <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_node, -1])
-    expr2 <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_node, -1])
-    expr_data <- c(expr1, expr2)
-    conditions <- c(rep(gexp_condition_names[1], length(expr1)), rep(gexp_condition_names[2], length(expr2)))
-    title <- sprintf("%s || %s vs %s", input$id_node, gexp_condition_names[1], gexp_condition_names[2])
-
-    return(list(expr_data = expr_data, conditions = conditions, title = title))
-  }
-
-  violinPlot_data_for_comparison <- function() {
-    expr1 <- as.numeric(comparison_data$doc_data[Gene == input$id_node, -1])
-    expr2 <- as.numeric(comparison_data$arm_data[Gene == input$id_node, -1])
-    expr_data <- c(expr1, expr2)
-    conditions <- c(rep(comparison_data$condition_names[1], length(expr1)), rep(comparison_data$condition_names[2], length(expr2)))
-    condition_names <- sort(comparison_data$condition_names, decreasing = FALSE) # just to get the same order of conditions names in the title
-    title <- sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2])
-
-    return(list(expr_data = expr_data, conditions = conditions, title = title))
-  }
-
-  linearModelPlot_data_for_displayed_GRN <- function() {
+  # render linear model plot of the force network
+  output$linear_model_plot <- renderPlot({    
+    if (is.null(input$id_source)) {
+      return(NULL)
+    }
     expr1_x <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_source, -1])    
     expr1_y <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_target, -1])    
     expr2_x <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_source, -1])    
@@ -442,65 +484,61 @@ server <- function(input, output) {
     conditions <- c(rep(gexp_condition_names[1], length(expr1_x)), rep(gexp_condition_names[2], length(expr2_x)))
     title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, gexp_condition_names[1], gexp_condition_names[2])
 
-    return(list(x = x, y = y, conditions = conditions, title = title))
-  }
+    plot <- plot_linear_model(x, y, conditions, title)
+    output$downloadGRNLinearModelPlot <- download_plot(plot, title)
 
-  linearModelPlot_data_for_comparison <- function() {
-    expr1_x <- as.numeric(comparison_data$doc_data[Gene == input$id_source, -1])    
-    expr1_y <- as.numeric(comparison_data$doc_data[Gene == input$id_target, -1])    
-    expr2_x <- as.numeric(comparison_data$arm_data[Gene == input$id_source, -1])    
-    expr2_y <- as.numeric(comparison_data$arm_data[Gene == input$id_target, -1])
-    x <- c(expr1_x, expr2_x)
-    y <- c(expr1_y, expr2_y)
-    conditions <- c(rep(comparison_data$condition_names[1], length(expr1_x)), rep(comparison_data$condition_names[2], length(expr2_x)))
-    condition_names <- sort(comparison_data$condition_names, decreasing = FALSE) # just to get the same order of conditions names in the title
-    title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, condition_names[1], condition_names[2])
-
-    return(list(x = x, y = y, conditions = conditions, title = title))
-  }
-
-  # render Gene expression plot of the force network
-  output$violin_plot <- renderPlot({
-    plot_data <- violinPlot_data_for_displayed_GRN()    
-    plot_violin_plot(plot_data$expr_data, plot_data$conditions, plot_data$title)
-  }) 
-
-  # render linear model plot of the force network
-  output$linear_model_plot <- renderPlot({    
-    plot_data <- linearModelPlot_data_for_displayed_GRN()
-    plot_linear_model(plot_data$x, plot_data$y, plot_data$conditions, plot_data$title)
+    plot
   })
+  
+  ### Comparison Plots ###
+  output$comparison_violin_plot <- renderPlot({
+    if (is.null(input$id_node) || is.null(input$selection_dropdown) || is.null(input$clusters_pick)) { # only plot if all three values are set
+      return(NULL)
+    }
+    input$compare_button
 
-  comparison_data <- reactiveValues(arm_data = NULL, doc_data = NULL, condition_names = NULL)
-  # comparing to other Results:
-  observeEvent(input$compare_button, {
-    comparison_data$doc_data <- NULL
-    comparison_data$arm_data <- NULL
-    selection <- NULL
-    if(input$selection_dropdown == "NA" || is.null(input$clusters_pick)) {
-      return()
-    } else if (input$selection_dropdown == "Arm vs Doc D10 Spleen") {
-      selection <- c("Doc:Spleen:1:d10,Doc:Spleen:3:d10,Doc:Spleen:5:d10", "Arm:Spleen:2:d10,Arm:Spleen:3:d10,Arm:Spleen:4:d10")
-      comparison_data$condition_names <- c("Doc_Spleen_d10", "Arm_Spleen_d10")
-    } else if (input$selection_dropdown == "Arm vs Doc D28 Spleen") {
-      selection <- c("Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28", "Arm:Spleen:1:d28,Arm:Spleen:3:d28,Arm:Spleen:5:d28")
-      comparison_data$condition_names <- c("Doc_Spleen_d28", "Arm_Spleen_d28")
-    } else if (input$selection_dropdown == "Arm vs Doc D10 Liver") {
-      selection <- c("Doc:Liver:1:d10,Doc:Liver:3:d10,Doc:Liver:5:d10", "Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10")
-      comparison_data$condition_names <- c("Doc_Liver_d10", "Arm_Liver_d10")
-    } else if (input$selection_dropdown == "Arm vs Doc D28 Liver") {
-      selection <- c("Doc:Liver:1:d28,Doc:Liver:2:d28,Doc:Liver:4:d28", "Arm:Liver:1:d28,Arm:Liver:3:d28,Arm:Liver:5:d28")
-      comparison_data$condition_names <- c("Doc_Liver_d28", "Arm_Liver_d28")
-    } 
+    cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
+    Idents(adata)<-'group' # TODO this is hardcoded potentially problematic
+    asub<-subset(adata, subset = cluster %in% isolate(input$clusters_pick))
+    condition_names<-sapply(isolate(input$selection_dropdown), function(x) gsub(pattern = '_', replacement = ' ', x))
+    condition_names <- sort(condition_names, decreasing=FALSE)
+    cols <- colors
+    names(cols) <- c(gsub(pattern = '_', replacement = ' ',  condition_names[1]), gsub(pattern = '_', replacement = ' ',  condition_names[2])) 
+    VlnPlot(asub, features = isolate(input$id_node), idents = condition_names, cols = cols, y.max=4)
     
-    clusters <- strsplit(input$clusters_pick, ",")
+  })
+  
+  output$comparison_linear_model_plot <- renderPlot({
+    if (is.null(input$id_source) || is.null(input$selection_dropdown) || is.null(input$clusters_pick)) { # only plot if all three values are set
+      return(NULL)
+    }
+    input$compare_button
+    doc_data <- NULL
+    arm_data <- NULL
+    
+    condition_names <- isolate(input$selection_dropdown)
+
+    selection<-c()
+    for(i in isolate(input$selection_dropdown)){
+      relevant<- as.character(unique(as.data.table(adata@meta.data)[group==i]$sample))
+      relevant<- sapply(relevant, function(x) gsub(x, pattern=' ', replacement=':'))
+      relevant<-paste0(relevant, collapse = ',')
+      selection<-c(selection, relevant)
+    }
+    # print(selection)
+    
+    
+    clusters <- isolate(input$clusters_pick)
     cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
     n.samples <- 30           # TODO: Same as line above, make it flexible (also hardcoded in boostdiff.nf), however does not break as line above if not flexible and changed
     p.missing <- 10           # Hardcoded in create_metacells.R (not set in boostdiff.nf) 
+    
+    
+    # print(clusters)
     for (s in selection) {
       s <- strsplit(s, ',')
       s <- unname(sapply(s, function(x) strsplit(x ,":")))
-
+      
       meta.cell.dfs<-list()
       meta.cell.df<-NULL
       for (g in 1:length(s)){
@@ -512,11 +550,11 @@ server <- function(input, output) {
         for (i in 2:length(opt$group.var)){
           select.cells<-intersect(select.cells, which(adata@meta.data[, opt$group.var[i]]==s[[g]][i]))
         }
-
+        
         # select clusters (multiple)
         select.cells<-intersect(select.cells, which(adata@meta.data[, cluster.name] %in% as.numeric(clusters)))
-
-
+        
+        
         subset<-subset(adata, cells = select.cells)
         # Find number of barcodes in object
         n.cells<-nrow(subset@meta.data)
@@ -545,48 +583,77 @@ server <- function(input, output) {
       }
       select<-which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(p.missing/100))
       meta.cell.df<-meta.cell.df[select, ]
-      if(is.null(comparison_data$doc_data)) {
-        comparison_data$doc_data <- meta.cell.df     
+      if(is.null(doc_data)) {
+        doc_data <- meta.cell.df     
       } else {
-        comparison_data$arm_data <- meta.cell.df
+        arm_data <- meta.cell.df
       }
     }
-    gene_names <- intersect(comparison_data$doc_data$Gene, comparison_data$arm_data$Gene)
-    comparison_data$doc_data <- comparison_data$doc_data[Gene %in% gene_names]
-    comparison_data$arm_data <- comparison_data$arm_data[Gene %in% gene_names]      
-  })  
+    
+    gene_names <- intersect(doc_data$Gene, arm_data$Gene)
+    doc_data <- doc_data[Gene %in% gene_names]
+    arm_data <- arm_data[Gene %in% gene_names]      
+    
+    expr1_x <- as.numeric(doc_data[Gene == isolate(input$id_source), -1])    
+    expr1_y <- as.numeric(doc_data[Gene == isolate(input$id_target), -1])    
+    expr2_x <- as.numeric(arm_data[Gene == isolate(input$id_source), -1])    
+    expr2_y <- as.numeric(arm_data[Gene == isolate(input$id_target), -1])
+    
+    
+    x <- c(expr1_x, expr2_x)
+    y <- c(expr1_y, expr2_y)
+    conditions <- c(rep(condition_names[1], length(expr1_x)), rep(condition_names[2], length(expr2_x)))
+    condition_names <- sort(condition_names, decreasing = FALSE) # just to get the same order of conditions names in the title
+    title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, condition_names[1], condition_names[2])
+      
+    plot <- plot_linear_model(x, y, conditions, title)
 
-  output$comparison_violin_plot <- renderPlot({
-    if(!is.null(comparison_data$arm_data)) {
-      plot_data <- violinPlot_data_for_comparison()
-      plot_violin_plot(plot_data$expr_data, plot_data$conditions, plot_data$title)
+    output$downloadComparisonLinearModelPlot <- download_plot(plot, title)
+    plot
+  })
+    
+  ##########################
+  output$umap_plot<-renderPlot({
+    FeaturePlot(adata, features = input$select_genes, ncol=6)
+  })
+  
+  output$standard_violin_plot<-renderPlot({
+    VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6)
+  })
+  
+  output$dot_plot<-renderPlot({
+    DotPlot(adata, features = input$select_genes, group.by = input$select_primary_grouping)
+  })
+  
+  observe({
+    x = input$id_node
+    edit <- isolate(input$select_genes)
+    if (length(edit)<12){
+      selection<-c(edit, x)
+    }else{
+      selection<-edit
     }
+    updateSelectInput(session,'select_genes',
+                      choices = rownames(adata),
+                      selected = selection)
   })
 
-  output$comparison_linear_model_plot <- renderPlot({
-    if(!is.null(comparison_data$arm_data)) {
-      plot_data <- linearModelPlot_data_for_comparison()
-      plot_linear_model(plot_data$x, plot_data$y, plot_data$conditions, plot_data$title)
-    }
-  })
-
-  download_plot <- function(plotting_function, plot_data) {
+  download_plot <- function(plotting_function, filename) {
     downloadHandler(
       filename = function() {
-        sprintf("%s.png", plot_data$title) # Filename for the downloaded plot
+        sprintf("%s.png", title) # Filename for the downloaded plot
       },
       content = function(file) {
         # Save the plot as a file
-        ggsave(file, plot = do.call(plotting_function, plot_data))
+        ggsave(file, plot = plotting_function())
       }
     )
   }
 
-  output$downloadGRNViolinPlot <- download_plot(plot_violin_plot, violinPlot_data_for_displayed_GRN())
-  output$downloadComparisonViolinPlot <- download_plot(plot_violin_plot, violinPlot_data_for_comparison())
-  output$downloadGRNLinearModelPlot <- download_plot(plot_linear_model, linearModelPlot_data_for_displayed_GRN())
-  output$downloadComparisonLinearModelPlot <- download_plot(plot_linear_model, linearModelPlot_data_for_comparison())
+  output$downloadGRNViolinPlot <- download_plot(violinPlot_data_for_displayed_GRN, "testing_1")
+  output$downloadComparisonViolinPlot <- download_plot(violinPlot_data_for_comparison, "testing_2")
 
+  ##########################
 }
 
 shinyApp(ui = ui, server = server) 
