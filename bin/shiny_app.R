@@ -73,7 +73,7 @@ if (gexp_condition_names[1] == gexp_condition1_name) {
 ########### Loading Seurat object, filtering the correct cells and performing differential testing
 adata <- readRDS(opt$seurat.file)
 # adata <- adata$all
-print(adata)
+
 # Set grouping var to Armstrong vs Docile
 opt$group.var<-strsplit(opt$group.var, ':')[[1]]
 
@@ -290,7 +290,7 @@ server <- function(input, output, session) {
   observe_helpers(withMathJax = TRUE)
   # The forcenetwork needs to be a reactive value to change the node/link values
 
-  displayed_network <- reactiveValues(network_data = NULL, fn = NULL, conditions = NULL)
+  displayed_network <- reactiveValues(network_data = NULL, fn = NULL, conditions = NULL, links = NULL)
 
   ### Observer Event for selecting the "background" GRN to display -> changes the complete network -> causes reload ###
   observeEvent(input$DiffGRN_pick, {
@@ -320,6 +320,8 @@ server <- function(input, output, session) {
 
     links <- data.frame(source = network_data[, 2], target = network_data[, 1], width=network_data[, 3]*100, stringsAsFactors=F)
     nodes <- data.frame(name = unique(c(unique(links$source), unique(links$target))), group = 1)
+    displayed_network$links <- links # this is required to show the accurate link overlap with the upload edge list functionality because the node names are transformed into id's to create the force network
+    
     nodes$id = seq(0, nrow(nodes)-1)
     # replacing node names with numeric values in links for plotting function
     i <- 0
@@ -340,13 +342,23 @@ server <- function(input, output, session) {
                         NodeID = 'name', Group = 'group', Value="width", opacity = 1, arrows=TRUE, 
                         linkColour=network_data$condition, opacityNoHover = 0.6, zoom=TRUE, colourScale = JS('d3.scaleOrdinal().domain(["1"]).range(["#000000"])'))
 
-    # adding switch information to access it later on
-    fn$x$links$scanet_switch <- FALSE
     # adding linear model information to force network
     fn$x$links$effect <- network_data[,5]
-    # TODO: Change conditions so that the differential conditions are always first
+
+    # adding switch information as it is currently set
+    fn$x$links$comparisonGRNSwitch <- input$comparison_grn_switch_edges
+    fn$x$nodes$comparisonGRNSwitch <- input$comparison_grn_switch_nodes
+    if (!is.null(input$comparison_grn_file)) {
+      comparison_network <- read.table(input$comparison_grn_file$datapath, sep = ",", header = TRUE)[, 2:3]
+      comparison_nodes <- unique(c(comparison_network[, 1], comparison_network[, 2]))
+      fn$x$links$existsInComparisonGRN <- do.call(paste0, displayed_network$links[, 1:2]) %in% do.call(paste0, comparison_network)
+      fn$x$nodes$existsInComparisonGRN <- fn$x$nodes$name %in% comparison_nodes
+    }
+
+    # TODO: Change conditions so that the differential conditions are always first  
     displayed_network$conditions <- sort(unique(network_data$condition), decreasing = FALSE)
     displayed_network$fn <- fn
+
   })
 
    ### render displayed force network ###
@@ -419,7 +431,8 @@ server <- function(input, output, session) {
   observeEvent(input$comparison_grn_file, {
     comparison_network <- read.table(input$comparison_grn_file$datapath, sep = ",", header = TRUE)[, 2:3]
     comparison_nodes <- unique(c(comparison_network[, 1], comparison_network[, 2]))
-    displayed_network$fn$x$links$existsInComparisonGRN <- do.call(paste0, displayed_network$fn$x$links[, 1:2]) %in% do.call(paste0, comparison_network)
+    print(head(displayed_network$links[, 1:2]))
+    displayed_network$fn$x$links$existsInComparisonGRN <- do.call(paste0, displayed_network$links[, 1:2]) %in% do.call(paste0, comparison_network)
     displayed_network$fn$x$nodes$existsInComparisonGRN <- displayed_network$fn$x$nodes$name %in% comparison_nodes 
   })
 
