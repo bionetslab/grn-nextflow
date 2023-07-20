@@ -27,3 +27,6 @@ dependencies:
   - r-dt
   - r-shinythemes
   - r-shinyhelper
+  - arboreto
+  - importlib-metadata
+  - bioconductor-ebcoexpress

@@ -63,7 +63,7 @@ process SELECT_DATA {
 
   script:
   """
-  create_metacells.R -f $seurat_object -o "$name".tsv -g $column_name -s $selection_criteria -n 30 -l $cluster_name -k $cluster_ids
+  ${projectDir}/bin/data_preprocessing/create_metacells.R -f $seurat_object -o "$name".tsv -g $column_name -s $selection_criteria -n 30 -l $cluster_name -k $cluster_ids
   """
 }
 
@@ -76,7 +76,7 @@ process CHECK_FILES {
 
   script:
   """
-  check_input_files.R -c ${files[0]} -d ${files[1]} -e out_${files[0]} -f out_${files[1]}
+  ${projectDir}/bin/data_preprocessing/check_input_files.R -c ${files[0]} -d ${files[1]} -e out_${files[0]} -f out_${files[1]}
   """
 }
 
@@ -89,18 +89,120 @@ process RUN_BOOSTDIFF {
   each run
   
   output:
-  tuple val (key), path ("${key}/run_${run}/disease"), path ("${key}/run_${run}/control"), path ("${key}/run_${run}/case_control.txt")
+  tuple val (key), path ("${key}/boostdiff/run_${run}/disease"), path ("${key}/boostdiff/run_${run}/control"), path ("${key}/boostdiff/run_${run}/case_control.txt")
 
   script:
   """
-  mkdir -p "${key}/run_${run}/disease"
-  mkdir -p "${key}/run_${run}/control"
+  mkdir -p "${key}/boostdiff/run_${run}/disease"
+  mkdir -p "${key}/boostdiff/run_${run}/control"
   # This is required to keep track of which file is which because boostdiff assigns disease control
   # and deletes the filename. GroupTuple may change the file order/
-  touch "${key}/run_${run}/case_control.txt"
-  echo "$case_file\t${key}/run_${run}/disease" >> "${key}/run_${run}/case_control.txt"
-  echo "$control_file\t${key}/run_${run}/control" >> "${key}/run_${run}/case_control.txt"
-  run_boostdiff.py -c $case_file -d $control_file -o ${key}/run_${run} -n $n_features -e $n_estimators -p $n_processes -s $n_subsamples
+  touch "${key}/boostdiff/run_${run}/case_control.txt"
+  echo "$case_file\t${key}/boostdiff/run_${run}/disease" >> "${key}/boostdiff/run_${run}/case_control.txt"
+  echo "$control_file\t${key}/boostdiff/run_${run}/control" >> "${key}/boostdiff/run_${run}/case_control.txt"
+  ${projectDir}/bin/tools/boostdiff/run_boostdiff.py -c $case_file -d $control_file -o ${key}/boostdiff/run_${run} -n $n_features -e $n_estimators -p $n_processes -s $n_subsamples
+  """
+}
+
+process RUN_GRNBOOST2 {
+  publishDir params.publish_dir
+
+  input:
+  tuple val (key), path (case_file), path (control_file)
+  each run
+
+  output:
+  tuple val (key), path ("${key}/grnboost2/run_${run}/network.tsv")
+
+  script:
+  """
+  mkdir -p "${key}/grnboost2/run_${run}"
+  mkdir -p "${key}/grnboost2/run_${run}"
+  ${projectDir}/bin/tools/grnboost2/run_grnboost2.py -c $case_file -d $control_file -o ${key}/grnboost2/run_${run}/network.tsv
+  """
+}
+
+process RUN_ZSCORES {
+  publishDir params.publish_dir
+
+  input:
+  tuple val (key), path (case_file), path (control_file)
+  each run
+
+  output:
+  tuple val (key), path ("${key}/zscores/disease"), path ("${key}/zscores/control"), path("${key}/zscores/case_control.txt")
+
+  script:
+  """
+  mkdir -p "${key}/zscores/run_${run}/disease"
+  mkdir -p "${key}/zscores/run_${run}/control"
+  touch "${key}/zscores/run_${run}/case_control.txt"
+  echo "$case_file\t${key}/zscores/run_${run}/disease" >> "${key}/zscores/run_${run}/case_control.txt"
+  echo "$control_file\t${key}/zscores/run_${run}/control" >> "${key}/zscores/run_${run}/case_control.txt"
+  ${projectDir}/bin/tools/run_zscores.py -c $case_file -d $control_file -o ${key}/zscores/run_${run}/
+  """
+}
+
+process RUN_EBCOEXPRESS {
+  publishDir params.publish_dir 
+
+  input:
+  tuple val (key), path (case_file), path (control_file)
+  each run
+
+  output:
+  tuple val (key), path ("${key}/ebcoexpress/disease"), path ("${key}/ebcoexpress/control"), path("${key}/ebcoexpress/case_control.txt")
+
+  script:
+  """
+  mkdir -p "${key}/ebcoexpress/run_${run}/disease"
+  mkdir -p "${key}/ebcoexpress/run_${run}/control"
+  touch "${key}/ebcoexpress/run_${run}/case_control.txt"
+  echo "$case_file\t${key}/ebcoexpress/run_${run}/disease" >> "${key}/ebcoexpress/run_${run}/case_control.txt"
+  echo "$control_file\t${key}/ebcoexpress/run_${run}/control" >> "${key}/ebcoexpress/run_${run}/case_control.txt"
+  ${projectDir}/bin/tools/run_ebcoexpress.py -c $case_file -d $control_file -o ${key}/ebcoexpress/run_${run}/
+  """
+}
+
+process RUN_DIFFCOEX {
+  publishDir params.publish_dir 
+
+  input:
+  tuple val (key), path (case_file), path (control_file)
+  each run
+
+  output:
+  tuple val (key), path ("${key}/diffcoex/disease"), path ("${key}/diffcoex/control"), path("${key}/diffcoex/case_control.txt")
+
+  script:
+  """
+  mkdir -p "${key}/diffcoex/run_${run}/disease"
+  mkdir -p "${key}/diffcoex/run_${run}/control"
+  touch "${key}/diffcoex/run_${run}/case_control.txt"
+  echo "$case_file\t${key}/diffcoex/run_${run}/disease" >> "${key}/diffcoex/run_${run}/case_control.txt"
+  echo "$control_file\t${key}/diffcoex/run_${run}/control" >> "${key}/diffcoex/run_${run}/case_control.txt"
+  ${projectDir}/bin/tools/run_diffcoex.py -c $case_file -d $control_file -o ${key}/diffcoex/run_${run}/
+  """
+}
+
+process RUN_GGMBASED {
+  publishDir params.publish_dir 
+
+  input:
+  tuple val (key), path (case_file), path (control_file)
+  each run
+
+  output:
+  tuple val (key), path ("${key}/ggmbased/disease"), path ("${key}/ggmbased/control"), path("${key}/ggmbased/case_control.txt")
+
+  script:
+  """
+  mkdir -p "${key}/ggmbased/run_${run}/disease"
+  mkdir -p "${key}/ggmbased/run_${run}/control"
+  touch "${key}/ggmbased/run_${run}/case_control.txt"
+  echo "$case_file\t${key}/ggmbased/run_${run}/disease" >> "${key}/ggmbased/run_${run}/case_control.txt"
+  echo "$control_file\t${key}/ggmbased/run_${run}/control" >> "${key}/ggmbased/run_${run}/case_control.txt"
+  ${projectDir}/bin/tools/run_ggmbased.py -c $case_file -d $control_file -o ${key}/ggmbased/run_${run}/
   """
 }
 
@@ -119,7 +221,7 @@ process POSTPROCESS_BOOSTDIFF {
 
   script:
   """
-  postprocessing_boostdiff.py -c $case_file -d $control_file -e $case_control -o ${key}/run_${run}
+  ${projectDir}/bin/tools/boostdiff/postprocessing_boostdiff.py -c $case_file -d $control_file -e $case_control -o ${key}/run_${run}
   """
 }
 
@@ -132,11 +234,28 @@ process AGGREGATE_POSTPROCESS_BOOSTDIFF {
   tuple val (top_n_targets), val (top_n_edges)
 
   output:
-  tuple val (key), path ("${key}/aggregated_filtered_network.txt"), val (top_n_targets), val (top_n_edges)
+  tuple val (key), path ("${key}/boostdiff/aggregated_filtered_network_boostdiff.txt"), val (top_n_targets), val (top_n_edges)
 
   script:
   """
-  aggregated_postprocessing.py -o $key -r $runs -t $top_n_targets -e $top_n_edges
+  ${projectDir}/bin/tools/boostdiff/aggregated_postprocessing_boostdiff.py -o ${key}/boostdiff/ -r $runs -t $top_n_targets -e $top_n_edges
+  """
+}
+
+process AGGREGATE_POSTPROCESS_GRNBOOST2 {
+  publishDir params.publish_dir
+
+  input:
+  tuple val (key), path (gene_expr_cond1), path (gene_expr_cond2), path (network_files, stageAs: "run_?/*")
+  val (runs)
+  val (top_n_edges)
+
+  output:
+  tuple val (key), path ("${key}/grnboost2/aggregated_filtered_network_grnboost.txt"), val (top_n_edges)
+
+  script:
+  """
+  ${projectDir}/bin/tools/grnboost2/aggregated_postprocessing_grnboost2.py -c $gene_expr_cond1 -d $gene_expr_cond2 -o ${key}/grnboost2/ -r $runs -e $top_n_edges
   """
 }
 
@@ -151,7 +270,7 @@ process PLOT_GRN {
 
   script:
   """
-  plotting_grn.R -i ${network} -o ${key} -n "${key}/diffGRN_top${top_n_targets}targets_top${top_n_edges}edges.html"
+  ${projectDir}/bin/post_processing/plotting_grn.R -i ${network} -o ${key} -n "${key}/diffGRN_top${top_n_targets}targets_top${top_n_edges}edges.html"
   """
 }
 
@@ -159,11 +278,12 @@ process CREATE_SHINY_APP {
   publishDir params.publish_dir
 
   input: 
-  tuple val (key), path (network), val (top_n_targets), val (top_n_edges)
+  tuple val (key), path (boostdiff_network), val (top_n_targets), val (top_n_edges_boostdiff)
   tuple val (key), path (case_file), path (control_file)
   path seurat_object
   val column_name
   val selection
+  tuple val (key), path (grnboost_network), val (top_n_edges_grnboost2)
 
   output:
   path ("${key}/run_shiny.sh")
@@ -174,10 +294,9 @@ process CREATE_SHINY_APP {
   """
   mkdir -p "${key}"
   touch "${key}/run_shiny.sh"
-  touch "shiny.R"
   cat ${case_file} >> "${key}/${case_file}"
   cat ${control_file} >> "${key}/${control_file}"
-  echo "Rscript ${projectDir}/bin/shiny_app.R -n ${network} -c ${case_file} -d ${control_file} -f ${params.seurat_object} -g ${column_name} -s ${selection}" >> "${key}/run_shiny.sh"
+  echo "Rscript ${projectDir}/bin/shiny_app.R -n ${boostdiff_network} -c ${case_file} -d ${control_file} -f ${params.seurat_object} -g ${column_name} -s ${selection} --grnboost_network.file=grnboost2/${grnboost_network} -p $projectDir" >> "${key}/run_shiny.sh"
   chmod u+x ${key}/run_shiny.sh
   """
 }
@@ -208,12 +327,12 @@ workflow {
   
   selection = 
     [
-      // ['Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28', "Doc_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
-      // ['Arm:Spleen:1:d28,Arm:Spleen:3:d28,Arm:Spleen:5:d28', "Arm_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
-      ['Doc:Spleen:1:d10,Doc:Spleen:3:d10,Doc:Spleen:5:d10', "Doc_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
-      ['Arm:Spleen:2:d10,Arm:Spleen:3:d10,Arm:Spleen:4:d10', "Arm_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
-      ['Doc:Liver:1:d28,Doc:Liver:2:d28,Doc:Liver:4:d28', "Doc_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
-      ['Arm:Liver:1:d28,Arm:Liver:3:d28,Arm:Liver:5:d28', "Arm_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
+      ['Doc:Spleen:1:d28,Doc:Spleen:2:d28,Doc:Spleen:4:d28', "Doc_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
+      ['Arm:Spleen:1:d28,Arm:Spleen:3:d28,Arm:Spleen:5:d28', "Arm_Spleen_d28", 'Arm_vs_Doc_D28:Spleen', 'cluster', '1:2'],
+      // ['Doc:Spleen:1:d10,Doc:Spleen:3:d10,Doc:Spleen:5:d10', "Doc_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
+      // ['Arm:Spleen:2:d10,Arm:Spleen:3:d10,Arm:Spleen:4:d10', "Arm_Spleen_d10", 'Arm_vs_Doc_D10:Spleen', 'cluster', '1:2'],
+      // ['Doc:Liver:1:d28,Doc:Liver:2:d28,Doc:Liver:4:d28', "Doc_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
+      // ['Arm:Liver:1:d28,Arm:Liver:3:d28,Arm:Liver:5:d28', "Arm_Liver_d28", 'Arm_vs_Doc_D28:Liver', 'cluster', '1:2'],
       // ['Doc:Liver:1:d10,Doc:Liver:3:d10,Doc:Liver:5:d10', "Doc_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
       // ['Arm:Liver:2:d10,Arm:Liver:3:d10,Arm:Liver:4:d10', "Arm_Liver_d10", 'Arm_vs_Doc_D10:Liver', 'cluster', '1:2'],
     ]
@@ -250,15 +369,24 @@ workflow {
   boostdiff_grouped_ch = boostdiff_ch.groupTuple()
   boostdiff_grouped_ch.view { "value: $it" }
 
-  aggregate_ch = AGGREGATE_POSTPROCESS_BOOSTDIFF(checked_ch.join(boostdiff_grouped_ch), params.n_runs, boostdiff_filtering_settings)
-  aggregate_ch.view()
+  grnboost_ch = RUN_GRNBOOST2(checked_ch, runs)
+  grnboost_grouped_ch = grnboost_ch.groupTuple()
+  grnboost_grouped_ch.view { "value: $it" }
 
-  plot_ch = PLOT_GRN(aggregate_ch)
+  aggregate_boostdiff_ch = AGGREGATE_POSTPROCESS_BOOSTDIFF(checked_ch.join(boostdiff_grouped_ch), params.n_runs, boostdiff_filtering_settings)
+  aggregate_boostdiff_ch.view()
+
+  aggregate_grnboost_ch = AGGREGATE_POSTPROCESS_GRNBOOST2(checked_ch.join(grnboost_grouped_ch), params.n_runs, params.top_n_edges) 
+  aggregate_grnboost_ch.view()
+
+
+  // plot_ch = PLOT_GRN(aggregate_ch)
   CREATE_SHINY_APP(
-                aggregate_ch, 
+                aggregate_boostdiff_ch, 
                 checked_ch, 
                 params.seurat_object, 
                 params.column_name, 
                 selection.collect { it.join(",") }.join("-"), 
+                aggregate_grnboost_ch
               )
 }

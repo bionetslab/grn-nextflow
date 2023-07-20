@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-"""Usage: aggregate_postprocessing.py -o FOLDER -r RUNS [-t NUM_TARGETS] [-e NUM_EDGES]
+"""Usage: aggregated_postprocessing_grnboost2.py -c FILE -d FILE -o FOLDER -r RUNS [-e NUM_EDGES]
 
-Script that aggregates the result of --n_runs runs of boostdiff and performs postprocessing on
-the aggregated network as performed in the postprocessing in boostdiff. Additionally, small linear
+Script that aggregates the result of --n_runs runs of grnboost2 and only keeps top $NUM_EDGES based on 
+a union aggregation of the importance scores of the individual runs. Additionally, small linear
 models are fitted on every edge to determine the regulatory (up or down regulation) of the interaction.
 
 -h --help               show this
 -o --output FOLDER      specify output folder
+-c --inputfile1 FILE    specify bulk expression input file (same input as in run_grnboost2.py)
+-d --inputfile2 FILE    specify bulk expression input file (same input as in run_grnboost2.py)
 -r --n_runs RUNS    no. runs of tool
--t --top_n_targets NUM_TARGETS    no. top targets to filter [default: 20]
 -e --top_n_edges NUM_EDGES    no. top edges to filter [default: 100]
 
 --verbose    print more text
@@ -24,144 +25,95 @@ import numpy as np
 import time
 import os
 
-def load_boostDiff_results(n_runs):
-    """Loads the data of $n_runs boostdiff runs. See https://github.com/gihannagalindez/boostdiff_inference for more information about the outputs.
+def load_grnboost2_results(n_runs):
+    """Loads the data of $n_runs grnboost2 runs.
     
     Args:
         n_runs (int): no. of total runs that were performed
     
     Retuns:
-        boostDiffNetworks_condition1 (List): List that contains $n_runs inferred boostdiff networks for condition 1
-        boostDiffNetworks_condition2 (List): List that contains $n_runs inferred boostdiff networks for condition 2 
-        differencesTests_condition1 (List): List that contains $n_runs inferred differences Tests for condition 1 
-        differencesTests_condition1 (List): List that contains $n_runs inferred differences Tests for condition 2 
-        file_condition (tuple): Tuple that contains the correct links for case/control to condition 1/2
+        networks (List): List that contains $n_runs inferred networks 
     """
-    # find the true labels for case and control and the respective gene expression data file name (same for every run -> check first run because it always exists)
-    file_case_control = os.path.join(f'run_{1}/case_control.txt')
-    file_condition = []
-    with open(file_case_control, 'r') as handle:
-        for line in handle:
-            line = line.rstrip()
-            line = line.split('\t')
-            l = line[0].replace('out_', "")
-            l = l.replace('.tsv', "")
-            file_condition.append((l, line[0], line[1][-7:]))
-    print(file_condition)       
-
-    boostDiffNetworks_condition1, boostDiffNetworks_condition2 = [], []
-    differencesTests_condition1, differencesTests_condition2 = [], []
-    
+    networks = []
     for i in range(n_runs):
-        boostDiffNetworks_condition1.append(pd.read_csv(os.path.join(f'run_{i+1}/{file_condition[0][2]}/boostdiff_network_test.txt'), 
-                                            sep='\t', names=["target", "regulator", f"weight{i+1}"], header=None))
-        boostDiffNetworks_condition2.append(pd.read_csv(os.path.join(f'run_{i+1}/{file_condition[1][2]}/boostdiff_network_test.txt'), 
-                                            sep='\t', names=["target", "regulator", f"weight{i+1}"], header=None))
-        differencesTests_condition1.append(pd.read_csv(os.path.join(f'run_{i+1}/{file_condition[0][2]}/differences_test.txt'), 
-                                            sep='\t', names=["gene", f"error_diff{i+1}"], header=None))
-        differencesTests_condition2.append(pd.read_csv(os.path.join( f'run_{i+1}/{file_condition[1][2]}/differences_test.txt'), 
-                                            sep='\t', names=["gene", f"error_diff{i+1}"], header=None))
+        networks.append(pd.read_csv(os.path.join(f'run_{i+1}/network.tsv'), 
+                                            sep='\t', names=["TF", "target", f"importance{i+1}"], header=None))
         
-    return boostDiffNetworks_condition1, boostDiffNetworks_condition2, differencesTests_condition1, differencesTests_condition2, file_condition
+    return networks
     
-def union_aggregation(networks_condition1, networks_condition2, differencesTests_condition1, differencesTests_condition2):
-    """Builds the aggregation of all networks by outer joining the networks and averaging over the score
+def union_aggregation(networks):
+    """Builds the aggregation of all networks by outer joining the networks and averaging over the score/importance
 
     Args:
-        networks_condition1 (List): List that contains $n_runs inferred boostdiff networks for condition 1
-        networks_condition2 (List): List that contains $n_runs inferred boostdiff networks for condition 2
-        differencesTests_condition1 (List): List that contains $n_runs inferred differences Tests for condition 1 
-        differencesTests_condition2 (List): List that contains $n_runs inferred differences Tests for condition 2
+        network (List): List that contains $n_runs inferred networks
 
     Returns:
-        List: Aggregated results of each of the Args
+        List: Aggregated network
     """
-    res = []
-    for df in [networks_condition1, networks_condition2]:
-        df_tmp = reduce(lambda left, right: pd.merge(left, right, on=["target", "regulator"], how="outer"), df)
-        df_tmp = df_tmp.fillna(0)
-        df_tmp["weight"] = df_tmp.iloc[:,2:].astype(float).mean(axis=1)
-        df_tmp = df_tmp.drop(df_tmp.iloc[:, 2:-1], axis=1)
-        res.append(df_tmp.reset_index(drop=True))
+    result = reduce(lambda left, right: pd.merge(left, right, on=["TF", "target"], how="outer"), networks)
+    result = result[1:] # merge creates first row of columns names -> dropping this row
+    result = result.fillna(0)
+    result["weight"] = result.iloc[:, 2:].astype(float).mean(axis=1)
+    result = result.drop(result.iloc[:, 2:-1], axis=1)
+    result = result.reset_index(drop=True)
+    result = result.reindex(columns=["target", "TF", "weight"])
+    result = result.rename(columns={"TF": "regulator"})
+    
+    return result
 
-
-    for df in [differencesTests_condition1, differencesTests_condition2]:
-        df_tmp = reduce(lambda left, right: pd.merge(left, right, on=["gene"], how="outer"), df)
-        df_tmp = df_tmp.fillna(0)
-        df_tmp["error_diff"] = df_tmp.iloc[:,1:].astype(float).mean(axis=1)
-        df_tmp = df_tmp.drop(df_tmp.iloc[:, 1:-1], axis=1)
-        res.append(df_tmp.reset_index(drop=True))
-
-    return res
-
-def boostDiff_filter_graphs(network_condition1, network_condition2, differencesTest_condition1, differencesTest_condition2,
-                            file_condition, n_top_targets=20, n_top_edges=200):
+def grnboost2_filter_graphs(network, n_top_edges=200):
     """Filtering network as performed by boostdiff. Only keeping ${n_top_edges} edges to ${n_top_targets} target nodes.
 
     Args:
-        network_condition1 (Pandas df): edges of network of condition 1 and their weights (= feature importance)
-        network_condition2 (Pandas df): edges of network of condition 2 and their weights (= feature importance)
-        differencesTest_condition1 (Pandas df): nodes and error_diff score (= how differential they are expressed in this condition) of condition 1
-        differencesTest_condition2 (Pandas df): nodes and error_diff score (= how differential they are expressed in this condition) of condition 2
-        file_condition (tuple): Tuple that contains the correct links for case/control to condition 1/2
-        n_top_targets (int, optional): Top n target nodes for filtering. Defaults to 20.
+        network (Pandas df): inferred network
         n_top_edges (int, optional): Top n edges for filtering. Defaults to 200.
 
     Returns:
         Pandas df: filtered network
     """
-    differencesTest_condition1 = differencesTest_condition1.sort_values(by=["error_diff"], ascending=True)
-    differencesTest_condition2 = differencesTest_condition2.sort_values(by=["error_diff"], ascending=True)
+    network = network.sort_values(by="weight", ascending=False)
+    return network.head(n_top_edges)
 
-    top_target_genes_cond1 = list(differencesTest_condition1.head(n_top_targets)["gene"])
-    top_target_genes_cond2 = list(differencesTest_condition2.head(n_top_targets)["gene"])
-
-    network_condition1 = network_condition1[network_condition1.target.isin(top_target_genes_cond1)]
-    network_condition2 = network_condition2[network_condition2.target.isin(top_target_genes_cond2)]
-
-    network_condition1["condition"] = file_condition[0][0]
-    network_condition2["condition"] = file_condition[1][0]
-
-    full_network = pd.concat([network_condition1, network_condition2])
-    full_network = full_network.sort_values(by=["weight"], ascending=False)
-    return full_network.head(n_top_edges)
-
-def inh_or_act(file_condition, network):
+def inh_or_act(file1, file2, network):
     """Fitting a small linear model onto every edge of the network to determine the regulatory effect (activator or repressor).
 
     Args:
-        file_condition (tuple): Tuple that contains the correct links for case/control to condition 1/2
+        file1 (String): Path to file that contains bulk expression data for condition 1
+        file2 (String): Path to file that contains bulk expression data for condition 2
         network (Pandas df): Aggregated and filtered network
 
     Returns:
         Pandas df: Aggregated and filtered network with additional regulatory edge information
     """
-    df_cond1 = pd.read_csv(file_condition[0][1], sep="\t")
-    df_cond2 = pd.read_csv(file_condition[1][1], sep="\t")
+    
+    
+    
+    ex_matrix_cond1 = pd.read_csv(file1, sep='\t')
+    ex_matrix_cond2 = pd.read_csv(file2, sep='\t')
+
+    expr_matrix = pd.concat([ex_matrix_cond1, ex_matrix_cond2.iloc[:, 1:]], axis=1)
+    expr_matrix = expr_matrix.set_index('Gene')
+    
+    
+    gene_names = list(expr_matrix.index)
+    expr_matrix.index = expr_matrix.index.str.lower()
 
     slopes = []
 
     for _, row in network.iterrows():
-        target = row[0]
-        regulator = row[1]
-        condition = row[3]
+        target = row[0].lower()
+        regulator = row[1].lower()
         
-        ge_regulator, ge_target = None, None
-
-        if condition == file_condition[0][0]: 
-            ge_regulator = df_cond1[df_cond1['Gene'] == regulator].iloc[:,1:].to_numpy().flatten()
-            ge_target = df_cond1[df_cond1['Gene'] == target].iloc[:,1:].to_numpy().flatten()
-        else:
-            ge_regulator = df_cond2[df_cond2['Gene'] == regulator].iloc[:,1:].to_numpy().flatten()
-            ge_target = df_cond2[df_cond2['Gene'] == target].iloc[:,1:].to_numpy().flatten()
+        ge_regulator = list(expr_matrix.loc[regulator])
+        ge_target = list(expr_matrix.loc[target])
 
         slope, intercept = np.polyfit(ge_regulator, ge_target, 1)
         slopes.append(slope)
 
-    network["effect"] = slopes
+    network["effect"] = slopes    
     return network
 
-def write_output(network, output_path="", filename="aggregated_filtered_network.txt"):
+def write_output(network, output_path="", filename="aggregated_filtered_network.tsv"):
     """Writes the network to a tsv file
 
     Args:
@@ -173,7 +125,7 @@ def write_output(network, output_path="", filename="aggregated_filtered_network.
     os.makedirs(output_path, exist_ok=True)
     network.to_csv(out, index=False, sep="\t")
 
-def main(output_folder, n_runs, top_n_targets=20, top_n_edges=100):
+def main(file1, file2, output_folder, n_runs, top_n_edges=100):
     """Workflow for aggregating the runs and filtering/postprocessing the aggregated results
 
     Args:
@@ -182,22 +134,18 @@ def main(output_folder, n_runs, top_n_targets=20, top_n_edges=100):
         top_n_targets (int, optional): Top n target nodes for filtering. Defaults to 20.
         top_n_edges (int, optional): Top n edges for filtering. Defaults to 100.
     """
-    boostDiffNetworks_condition1, boostDiffNetworks_condition2, differencesTests_condition1, differencesTests_condition2, file_condition = load_boostDiff_results(
-        n_runs=n_runs)
+    networks = load_grnboost2_results(n_runs=n_runs)
     
     # perform "union" aggregation
-    aggregated_network_condition1, aggregated_network_condition2, aggregated_differencesTests_condition1, aggregated_differencesTests_condition2 = union_aggregation(
-        boostDiffNetworks_condition1, boostDiffNetworks_condition2, differencesTests_condition1, differencesTests_condition2)
+    aggregated_network = union_aggregation(networks)
     
     # filter the aggregated networks the same way as boostdiff does it
-    aggregated_filtered_network = boostDiff_filter_graphs(
-            aggregated_network_condition1, aggregated_network_condition2, aggregated_differencesTests_condition1, aggregated_differencesTests_condition2,
-            file_condition, top_n_targets, top_n_edges)
+    aggregated_filtered_network = grnboost2_filter_graphs(aggregated_network, top_n_edges)
     
     # fit linear model on edges to check if edge is activator or inhibitor
-    aggregated_filtered_network = inh_or_act(file_condition, aggregated_filtered_network)
+    aggregated_filtered_network = inh_or_act(file1, file2, aggregated_filtered_network)
     
-    write_output(network=aggregated_filtered_network, output_path=output_folder, filename="aggregated_filtered_network.txt")
+    write_output(network=aggregated_filtered_network, output_path=output_folder, filename="aggregated_filtered_network_grnboost.txt")
     
 
 def cast_arguments(argument_dict):
@@ -212,7 +160,7 @@ def cast_arguments(argument_dict):
     Returns:
         dict: arguments dictionary with correctly casted arguments
     """
-    int_args = ['--n_runs','--top_n_targets', '--top_n_edges']
+    int_args = ['--n_runs', '--top_n_edges']
     for ia in int_args:
         try:
             argument_dict[ia] = int(argument_dict[ia])
@@ -224,9 +172,10 @@ if __name__ == '__main__':
     arguments = docopt(__doc__, version='Boostdiff postprocessing')
     arguments = cast_arguments(argument_dict=arguments)
     print(arguments)
-    main(output_folder = arguments["--output"], 
+    main(file1 = arguments["--inputfile1"],
+         file2 = arguments["--inputfile2"],
+        output_folder = arguments["--output"], 
         n_runs = arguments["--n_runs"],
-        top_n_targets = arguments["--top_n_targets"],
         top_n_edges = arguments["--top_n_edges"]
     )
 
