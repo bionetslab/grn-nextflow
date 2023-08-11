@@ -1,7 +1,5 @@
-# boostdiff-nextflow
-A juicy, albeit not yet fully configurable nextflow workflow for Boostdiff using a Seurat object as input.
-
-# Installation Instruction 
+# Inter-Net Xplorer
+## Installation Instruction 
 1) Install nextflow with the following command (can be moved to any directory you want): (requires Java version 11 or higher)   
 ```
 curl -fsSL get.nextflow.io | bash
@@ -21,25 +19,76 @@ git clone git@github.com:gihannagalindez/boostdiff_inference.git && cd boostdiff
 pip install .
 cd ..
 ```
-Now you are set to run the boostdiff nf pipeline!
+Now you are set to run Inter-Net Xplorer!
 
-# Running the boostdiff pipeline
-Run the follwing command inside the `boostdiff-nextflow` directory: (Replace `$(path_to_nextflow)` with the path to the directory that contains your nextflow installation)
+## Running Inter-Net Xplorer
+This section describes piece by piece how to run this pipeline. Examples will be provided along the way and at the end of this section.
+### 1) Running the nextflow pipeline
+To run the the nextflow pipeline use the following command. 
 ```
-$(path_to_nextflow)/nextflow run boostdiff.nf
-```
-The results are saved to `results/`. Note that only symlinks to the `work/` folder of nextflow are saved in the `results/` folder. If you want to upload your results to a git repository you need to copy the results (with following symlinks) into a folder and upload this folder. 
-If you change something in the settings or the run is interrupted use (reuses all the previously performed computations):
-```
-$(path_to_nextflow)/nextflow run boostdiff.nf -resume
+${path_to_nextflow}/nextflow run main.nf --tools=${tools_to_run} --mode=${data_mode} --input=${data_input}
 ```
 
-For information about the configuration of the pipeline run:
+### 2) Choosing ${tools_to_run} for GRN and DGRN inference
+The `--tools` parameter needs to be set to identify the tools that are used in the pipeline. Current available tools are:
+* DGRN inference tools:
+  * `boostdiff` (https://github.com/gihannagalindez/boostdiff_inference)
+* GRN inference tools:
+  * `grnboost2` (https://academic.oup.com/bioinformatics/article/35/12/2159/5184284)
+
+The `--tools` parameter needs to be set as comma separated list. For example, if you want to use boostdiff and grnboost2 you need to set `--tools=boostdiff,grnboost2`   
+
+### 3) Choosing the ${data_mode}
+The `--mode` parameter needs to be set to identify the data that you are using. Currently availabe modes are `seurat` and `tsv`.
+
+### 4) Specifying the ${data_input} file 
+
+#### 4.1) Mode is set to "seurat"
+Use the `--input` parameter to set the path to the seurat file
+
+#### 4.2) Mode is set to "tsv"
+Use the `--input_file1` parameter to set the path to the first tsv file. <br />
+Use the `--input_file2` parameter to set the path to the second tsv file. <br />
+If you are only using GRN inference tools, specifying one input is enough. <br />
+The first column of the tsv files **has to be named** `Gene` and contain all gene names. The following columns represent the samples. 
+
+### 5) Writing a configuration file
+
+#### 5.1) Mode is set to "seurat"
+The configuration file is a yaml file that contains the configuration for the data that you are using to select the correct cells
+1) Create a config.yaml file
+2) The structure for the config file is explained in the example config "example_config.yaml"
+3) Set the parameter `-params-file` to the path of your config file 
+
+#### 5.2) Mode is set to "tsv"
+You do not need to write a configuration file. However, you need to set an identifier for the anaylsis with the `--comparison_id` parameter. Set this to something identifiable and unique because the folder with the specifc analysis results will be named after this.
+
+### 6) Working example of running the pipeline:
+You only need to set the ${path_to_nextflow} specific to your system to run the following command and test the pipeline. (Needs to be run inside the project directory)
 ```
-$(path_to_nextflow)/nectflow run boostdiff.nf --help
+${path_to_nextflow}/nextflow run main.nf --tools=boostdiff,grnboost2 --mode=tsv --input_file1=$(pwd)/example_file1.tsv --input_file2=$(pwd)/example_file2.tsv --comparison_id=example_analysis
 ```
 
-# Settings of the pipeline
+## Structure of the pipeline:
+The pipeline is split into 3 steps:
+1) Data loading
+2) Running tools
+3) Analysis
+Every step has concretely defined inputs and outputs.
+### 1) Data loading:
+Inputs:
+  * tools: The tools used inside the pipeline defined via the `--tools` parameter
+Output:
+  * data: Nextflow channel with the structure [comparison_id, [file_1.tsv, file_2.tsv]]
+Function:
+  This step loads the data and performs some basic checks
+### 2) Running Tools
+
+## Adding a new data loading module:
+Suppose you want to add a new data loading module . This
+
+
+<!-- # Settings of the pipeline
 Standard settings of this pipeline:
 - Data:
   - Cluster 1, 2
@@ -78,4 +127,4 @@ Outputs:
 
 ![diff_grn](diff_grn_example.png)
 
-
+ -->

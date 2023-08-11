@@ -1,0 +1,1 @@
+/home/nicolai/Documents/Arbeit/NetMap/new/boostdiff-nextflow/work/16/754cb4298b4754cd63e2ec30bfc71d/example_analysis/grnboost2/aggregated_filtered_network_grnboost.txt

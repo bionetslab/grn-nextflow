@@ -1,0 +1,1 @@
+/home/nicolai/Documents/Arbeit/NetMap/new/boostdiff-nextflow/work/60/a45de6e0ff37c2bd6a1bb6214426a8/networks/Arm_vs_Doc_D28:Spleen-grnboost2-network.txt

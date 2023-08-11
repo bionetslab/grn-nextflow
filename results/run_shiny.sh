@@ -1,0 +1,1 @@
+/home/nicolai/Documents/Arbeit/NetMap/new/boostdiff-nextflow/work/3e/3bff5835c4462a03e2a88aab6942e2/run_shiny.sh

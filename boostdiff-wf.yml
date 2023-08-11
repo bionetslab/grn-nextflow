@@ -9,6 +9,7 @@ dependencies:
   - r
   - r-essentials
   - r-seurat
+  - r-seuratdisk
   - r-tidyverse
   - r-signac
   - r-optparse
@@ -29,4 +30,5 @@ dependencies:
   - r-shinyhelper
   - arboreto
   - importlib-metadata
+  - bioconductor-dcanr
   - bioconductor-ebcoexpress

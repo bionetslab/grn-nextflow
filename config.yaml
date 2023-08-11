@@ -1,0 +1,58 @@
+comparison: # Always keep this line as is
+  # You can add as many comparisons as you want (see e.g. comparison2 below) 
+  - comparison1: 
+      # comparison_id: Unique ID across the whole config.yaml file
+      #                Use a sensible id because the results folder gets named after this
+      comparison_id: "Arm_vs_Doc_D28:Spleen" 
+      # assay: Assay in Seurat object to use
+      assay: "SCTmerged"
+      # covariate_config: The covariate configuration consisting of 1-2 selections s1-s2
+      #   If you are using only GRN inference methods, you only need to enter a single selection is enough        
+      covariate_config:
+        # You can name the selections (here: s1, s2) anyway that you want
+        s1:
+          # output_file: Determines the folder name where the results for the given selection are saved.
+          # Must be unique across the two selections in one comparison
+          output_file: "Doc_Spleen_d28"
+          # The following key : value pairs in the selection are data specific!
+          # Key (here: infection, tissue, ...) represents the column name in the data object
+          # Value (here: Doc, Spleen, [1,2,4], ...) represents the values of the given key to select for in the data object
+          infection: "Doc"
+          tissue: "Spleen"
+          subject: [1, 2, 4]
+          time: "d28"
+        # Same as for selection s1.
+        s2:
+          output_file: "Arm_Spleen_d28"
+          infection: "Arm"
+          tissue: "Spleen"
+          subject: [1, 3, 5]
+          time: "d28"
+      # Additional filter option to apply on every selection. 
+      # Only 0 - 1 filters can be provided! 
+      filter:
+        # name: specifices the column name in the meta.data (for seurat objects)
+        name: "cluster"
+        # ids: specifcies the values to filter for in the given name column
+        ids: [1, 2]
+  # You can provide as many comparisons as you want following the same structure.
+  - comparison2:
+      comparison_id: "Arm_vs_Doc_D10:Spleen"
+      assay: "SCTmerged"
+      covariate_config:
+        s1:
+          output_file: "Doc_Spleen_d10"
+          infection: "Doc"
+          tissue: "Spleen"
+          subject: [1, 3, 5]
+          time: "d10"
+        s2:
+          output_file: "Arm_Spleen_d10"
+          infection: "Arm"
+          tissue: "Spleen"
+          subject: [2, 3, 4]
+          time: "d10"
+      filter:
+        name: "cluster"
+        ids: [1, 2]
+      
