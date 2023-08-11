@@ -1,1 +1,0 @@
-/home/nicolai/Documents/Arbeit/NetMap/new/boostdiff-nextflow/work/d7/ede0f9ef7007c8c09d778a260f5d94/networks/example_analysis-grnboost2-network.txt

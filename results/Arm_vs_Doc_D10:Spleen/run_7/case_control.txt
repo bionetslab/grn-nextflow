@@ -1,2 +1,0 @@
-out_Doc_Spleen_d10.tsv	Arm_vs_Doc_D10:Spleen/run_7/disease
-out_Arm_Spleen_d10.tsv	Arm_vs_Doc_D10:Spleen/run_7/control

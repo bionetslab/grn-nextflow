@@ -10,8 +10,8 @@ git clone git@github.com:bionetslab/boostdiff-nextflow.git && cd boostdiff-nextf
 ```
 2) Install the neccesary conda environment (this will take time). This can be sped up dramatically by using mamba instead of conda:  
 ```
-mamba env create --prefix=$(pwd)/boostdiff-wf --file=./boostdiff-wf.yml
-conda activate ./boostdiff-wf
+mamba env create --prefix=$(pwd)/environment --file=./environment.yml
+conda activate ./environment
 ```   
 3) Clone the `boostdiff_inference` tool (https://github.com/gihannagalindez/boostdiff_inference):
 ```

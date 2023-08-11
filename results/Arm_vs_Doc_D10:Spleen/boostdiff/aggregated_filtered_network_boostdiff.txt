@@ -1,1 +1,0 @@
-/home/nicolai/Documents/Arbeit/NetMap/new/boostdiff-nextflow/work/80/ac434d905103d563f19750f8046879/Arm_vs_Doc_D10:Spleen/boostdiff/aggregated_filtered_network_boostdiff.txt
