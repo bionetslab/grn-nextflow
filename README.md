@@ -26,7 +26,7 @@ This section describes piece by piece how to run this pipeline. Examples will be
 ### 1) Running the nextflow pipeline
 To run the the nextflow pipeline use the following command. 
 ```
-${path_to_nextflow}/nextflow run main.nf --tools=${tools_to_run} --mode=${data_mode} --input=${data_input}
+${path_to_nextflow}/nextflow run main.nf --tools=${tools_to_run} --mode=${data_mode} --input=${data_input} -params-file ${config_file}
 ```
 
 ### 2) Choosing ${tools_to_run} for GRN and DGRN inference
@@ -52,7 +52,7 @@ Use the `--input_file2` parameter to set the path to the second tsv file. <br />
 If you are only using GRN inference tools, specifying one input is enough. <br />
 The first column of the tsv files **has to be named** `Gene` and contain all gene names. The following columns represent the samples. 
 
-### 5) Writing a configuration file
+### 5) Writing a ${config_file}
 
 #### 5.1) Mode is set to "seurat"
 The configuration file is a yaml file that contains the configuration for the data that you are using to select the correct cells
