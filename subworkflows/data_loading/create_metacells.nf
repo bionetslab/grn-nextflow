@@ -1,13 +1,19 @@
-include { SELECT_DATA } from '../../modules/data_loading/'
+include { SELECT_DATA_SEURAT } from '../../modules/data_loading/'
+include { SELECT_DATA_TSVFILES } from '../../modules/data_loading/'
 include { CHECK_FILES } from '../../modules/data_loading/'
 
 workflow CREATE_METACELLS {
-    take: 
-        seurat_object
+    take:
+        mode
+        input
         selection
         
     main:
-        data_case_ch = SELECT_DATA(seurat_object, selection)
+        if (mode == "tsv") {
+            data_case_ch = SELECT_DATA_TSVFILES(input.transpose(), mode)            
+        } else if (mode == "seurat") {
+            data_case_ch = SELECT_DATA_SEURAT(input, selection, mode)
+        }
         data_case_ch.view()
 
         tuple_ch = data_case_ch.groupTuple()

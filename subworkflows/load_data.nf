@@ -1,5 +1,4 @@
 include { CREATE_METACELLS } from './data_loading/create_metacells'
-include { CHECK_INPUT_TSVFILES } from './data_loading/check_input_TSVfiles'
 
 workflow LOAD_DATA {
   take:
@@ -105,7 +104,7 @@ workflow LOAD_DATA {
       }
 
       input_case_ch = Channel.fromList(selection)
-      data = CREATE_METACELLS(params.input, input_case_ch)
+      data = CREATE_METACELLS(params.mode, params.input, input_case_ch)
     } else if(params.mode == "tsv"){
 
       // input_files = params.input.split(",")
@@ -114,7 +113,8 @@ workflow LOAD_DATA {
       //   assert !available_DGRNInference_tools.contains(tools) : "You have only provided one tsv file, but selected a tool for DGRN inference! Provide two tsv files or only use GRN inference."
       //   data = CHECK_INPUT_TSVFILES(params.comparison_id, params.input_file1, null)
       // }
-      data = CHECK_INPUT_TSVFILES(params.comparison_id, params.input_file1, params.input_file2)
+      data = Channel.of([params.comparison_id, [params.input_file1, params.input_file2]])
+      data = CREATE_METACELLS(params.mode, data, null)
     } else {
       throw new Exception('Please select one of the following modes for the provided data: "seurat", "tsv"')
     }

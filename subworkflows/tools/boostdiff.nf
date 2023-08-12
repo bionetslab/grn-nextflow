@@ -1,7 +1,5 @@
 include { RUN_TOOL } from '../../modules/tools/boostdiff'
 include { AGGREGATE_RESULTS } from '../../modules/tools/boostdiff'
-include { WRITE_NETWORK_TO_DIR } from '../../modules/post_processing'
-
 
 workflow BOOSTDIFF {
     take:
@@ -26,7 +24,6 @@ workflow BOOSTDIFF {
         boostdiff_grouped = boostdiff.groupTuple()
 
         boostdiff_network = AGGREGATE_RESULTS(data.join(boostdiff_grouped), params.n_runs, boostdiff_filtering_settings)
-        WRITE_NETWORK_TO_DIR("boostdiff", boostdiff_network)
 
     emit:
         boostdiff_network
