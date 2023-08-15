@@ -1,4 +1,5 @@
 include { CREATE_METACELLS } from './data_loading/create_metacells'
+include { CHECK_FILES } from '../modules/data_loading/'
 
 workflow LOAD_DATA {
   take:
@@ -106,6 +107,7 @@ workflow LOAD_DATA {
       input_case_ch = Channel.fromList(selection)
       data = CREATE_METACELLS(params.mode, params.input, input_case_ch)
     } else if(params.mode == "tsv"){
+      if (params.create_metacells){
 
       // input_files = params.input.split(",")
       // if (input_files.size() == 1) {
@@ -113,8 +115,18 @@ workflow LOAD_DATA {
       //   assert !available_DGRNInference_tools.contains(tools) : "You have only provided one tsv file, but selected a tool for DGRN inference! Provide two tsv files or only use GRN inference."
       //   data = CHECK_INPUT_TSVFILES(params.comparison_id, params.input_file1, null)
       // }
-      data = Channel.of([params.comparison_id, [params.input_file1, params.input_file2]])
-      data = CREATE_METACELLS(params.mode, data, null)
+
+        data = Channel.of([params.comparison_id, [params.input_file1, params.input_file2]])
+        data = CREATE_METACELLS(params.mode, data, null)
+      }
+      else{
+        grouped = Channel.of([params.comparison_id, params.input_file1], [params.comparison_id, params.input_file2])
+        tuple_ch = grouped.groupTuple()
+        tuple_ch.view { "value: $it" }
+
+        data = CHECK_FILES(tuple_ch)
+        data.view()
+      }
     } else {
       throw new Exception('Please select one of the following modes for the provided data: "seurat", "tsv"')
     }
