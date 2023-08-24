@@ -12,8 +12,8 @@
 ################################################################################
 
 ### Imports
-# library(htmlwidgets)
 # library(networkD3)
+library(htmlwidgets)
 library(optparse)
 
 ################################################################################
@@ -34,7 +34,6 @@ library(networkD3, lib.loc=sprintf("%s/lib", opt$project.folder))
 
 colors <- c("#cc79a7", "#009e73", "#0072b2")
 
-
 data <- read.table(file = opt$input.file, sep = "\t", header = TRUE)
 links <- data.frame(source = data[, 2], target = data[, 1], width=1, stringsAsFactors=F)
 nodes <- data.frame(name = unique(c(unique(links$source), unique(links$target))), group = 1)
@@ -50,13 +49,11 @@ for(node in nodes$name) {
 
 network <- list(links = links, nodes = nodes)
 
-
 conditions <- unique(data$condition)
 data$condition <- ifelse(data$condition == conditions[1], colors[1], data$condition)
 
 if (length(conditions) > 1) {
-  legend <- htmltools::div(
-    style = "padding: 10px; background-color: white;",
+  legend <- htmltools::div(style = "padding: 10px; background-color: white;",
     htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
     sprintf("Stronger in %s (Activator)", conditions[1]),
     htmltools::br(),
@@ -97,12 +94,12 @@ fn <- forceNetwork(Links = network$links, Nodes = network$nodes,
 
 # MyClickScript <- 'alert("You clicked " + d.name + " which is in row " +
 #        (d.index + 1) +  " of your original R data frame");'
-fn <- htmlwidgets::prependContent(fn, legend)
 
 fn$x$links$effect <- data[,5]
+fn <- prependContent(fn, legend)
 
 # add information about inhibition and activation on edges
-fnrender <- htmlwidgets::onRender(
+fnrender <- onRender(
   fn,
   '
   function(el, x) {
@@ -120,7 +117,7 @@ fnrender <- htmlwidgets::onRender(
 )
 
 dir.create(opt$output.folder)
-saveNetwork(fn, opt$output.file)  
+saveNetwork(fnrender, opt$output.file)  
 
 
 

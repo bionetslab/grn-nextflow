@@ -9,7 +9,6 @@ dependencies:
   - r
   - r-essentials
   - r-seurat
-  - r-seuratdisk
   - r-tidyverse
   - r-signac
   - r-optparse

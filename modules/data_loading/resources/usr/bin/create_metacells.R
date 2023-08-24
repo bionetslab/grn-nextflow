@@ -36,7 +36,7 @@ option_list <- list(
   make_option(c("-n", "--n.samples"), type="integer", default=100, 
               help="Number of meta cells to generate",
               metavar="number"),
-  make_option(c("-p", "--p.missing"), type="integer", default=10, 
+  make_option(c("-p", "--p.missing"), type="integer", default=50, 
               help="Percentage of 0 allowed per gene",
               metavar="number"),
   make_option(c("-s", "--selection"), type = 'character', default="", 
@@ -160,6 +160,9 @@ if (opt$mode == "seurat") {
   # Set the ident to the newly created meta.cell variable
   Idents(subset) <- "meta.cell"
   # Aggregate the expression
+  gexpr <- subset@assays[["RNA"]]@data
+  select<-which(rowSums(gexpr==0)/(ncol(gexpr)-1)<(opt$p.missing/100))
+  subset <- subset[select, ]
   agg<-AggregateExpression(subset, return.seurat = T)
   # export the results
   result.data.frame<-agg@assays[["RNA"]]@data
@@ -168,8 +171,7 @@ if (opt$mode == "seurat") {
   result.data.frame<-as.data.table(result.data.frame)
   result.data.frame<-cbind(row.names, result.data.frame)
   colnames(result.data.frame)<-c('Gene', column.names)
-  select<-which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(opt$p.missing/100))
-  result.data.frame<-result.data.frame[select, ]
+  # result.data.frame<-result.data.frame[select, ]
   # save the aggregated data frame into a tsv sheet
   fwrite(result.data.frame, file = file.path(opt$output.file), sep='\t')
 

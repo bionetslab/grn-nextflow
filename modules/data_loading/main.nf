@@ -1,4 +1,4 @@
-process SELECT_DATA_SEURAT {
+process CREATE_METACELLS_SEURAT {
   label 'big_mem'
 
   input:
@@ -15,7 +15,7 @@ process SELECT_DATA_SEURAT {
   """
 }
 
-process SELECT_DATA_TSVFILES {
+process CREATE_METACELLS_TSVFILES {
   label 'big_mem'
 
   input:
@@ -27,7 +27,7 @@ process SELECT_DATA_TSVFILES {
 
   script:
   """
-  create_metacells.R -f $tsv_file -o "aggregated_${tsv_file}" -n 30 -m $mode
+  create_metacells.R -f $tsv_file -o "aggregated_${tsv_file}" -n 30 -m $mode 
   """
   
 }

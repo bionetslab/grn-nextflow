@@ -1,16 +1,13 @@
 process CREATE_SHINY_APP {
   publishDir params.publish_dir
 
-  input: 
-  val selection
-
   output:
   path ("run_shiny.sh")
 
   script:
   """
   touch "run_shiny.sh"
-  echo "Rscript ${projectDir}/modules/shiny_app/resources/usr/bin/shiny_app.R -r ${params.publish_dir} -f ${params.data.seurat_object} -g ${params.data_loading_seurat.column_name} -s ${selection} -p $projectDir" >> "run_shiny.sh"
+  echo "Rscript ${projectDir}/modules/shiny_app/resources/usr/bin/shiny_app.R -r ${params.publish_dir} -f ${params.data.seurat_object} -g ${params.data_loading_seurat.column_name} -p $projectDir" >> "run_shiny.sh"
   chmod u+x "run_shiny.sh"
   """
 }

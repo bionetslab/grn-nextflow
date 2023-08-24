@@ -126,12 +126,13 @@ def boostDiff_filter_graphs(network_condition1, network_condition2, differencesT
     full_network = full_network.sort_values(by=["weight"], ascending=False)
     return full_network.head(n_top_edges)
 
-def inh_or_act(file_condition, network):
+def inh_or_act(file_condition, network, alpha=95):
     """Fitting a small linear model onto every edge of the network to determine the regulatory effect (activator or repressor).
 
     Args:
         file_condition (tuple): Tuple that contains the correct links for case/control to condition 1/2
         network (Pandas df): Aggregated and filtered network
+        alpha: Removing the top 100 - alpha % of values from the numpy array to fit the linear models (because data is not upcapped) 
 
     Returns:
         Pandas df: Aggregated and filtered network with additional regulatory edge information
@@ -155,6 +156,16 @@ def inh_or_act(file_condition, network):
             ge_regulator = df_cond2[df_cond2['Gene'] == regulator].iloc[:,1:].to_numpy().flatten()
             ge_target = df_cond2[df_cond2['Gene'] == target].iloc[:,1:].to_numpy().flatten()
 
+
+        threshold_regulator = np.percentile(ge_regulator, alpha)
+        threshold_target = np.percentile(ge_target, alpha)
+        
+        outliers_mask_regulator = ge_regulator > threshold_regulator
+        outliers_mask_target = ge_target > threshold_target
+
+        ge_regulator = ge_regulator[~outliers_mask_regulator]
+        ge_target = ge_target[~outliers_mask_target]
+        
         slope, intercept = np.polyfit(ge_regulator, ge_target, 1)
         slopes.append(slope)
 
