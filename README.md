@@ -22,7 +22,7 @@ cd ..
 Now you are set to run Inter-Net Xplorer!
 
 ## Interpretation of computed networks of Inter-Net Xplorer
-See this pdf [Network Explanation](https://github.com/bionetslab/grn-nextflow/man/network_explanation.pdf)
+See this pdf [Network Explanation](https://github.com/bionetslab/grn-nextflow/blob/dgrn_nf/man/network_explanation.pdf)
 
 ## Running Inter-Net Xplorer
 This section describes piece by piece how to run this pipeline. Examples will be provided along the way and at the end of this section.
