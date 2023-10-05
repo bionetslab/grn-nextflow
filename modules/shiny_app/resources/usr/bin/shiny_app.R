@@ -22,93 +22,147 @@ library(stringr)
 library(cowplot)
 ################################################################################
 
+
+
 option_list <- list(
-  make_option(c("-r", "--results.path"), type = 'character',
-              default='', help="Path to results"),
-  make_option(c("-s", "--selection"), type = 'character',
-              default='', help="selection (hardcoded parameter in boostdiff.nf)"),
-  make_option(c("-f", "--seurat.file"), type = 'character',
-              default='', help="Path to Seurat file"),
-  make_option(c("-g", "--group.var"), type = 'character', 
-              help="Grouping variable(s) in meta.data object separated by colon",
-              default = 'sample'),
-  make_option(c("-a", "--assay"), type = 'character',
-              help = "Assay to use", default = 'SCTmerged'),
-  make_option(c("--grnboost_network.file"), type = 'character',
-              default='', help="grnboost network data file"),
-  make_option(c("-p", "--project.folder"), type = 'character',
-              default='', help="path to project_directory"))
+  make_option(c("-r", "--results.path"), type='character',
+              default="", help="Path to results"),
+  make_option(c("-p", "--project.path"), type='character',
+              default="", help="Project path"),
+  make_option(c("-s", "--selection"), type='character',
+              default="", help="Configurated selection"),
+  make_option(c("-f", "--seurat.file"), type='character',
+              default="", help="Seurat data file"),
+  make_option(c("--dgrntools"), type='character',
+              default="No tools were chosen for DGRN Inference", help="used diffGRN tools in the pipeline"),
+  make_option(c("--grntools"), type='character',
+              default="No tools were chosen for GRN Inference", help="used GRN tools in the pipeline")
+)
+
+# option_list <- list(
+#   make_option(c("-r", "--results.path"), type = 'character',
+#               default='', help="Path to results"),
+#   make_option(c("-s", "--selection"), type = 'character',
+#               default='', help="selection (hardcoded parameter in boostdiff.nf)"),
+#   make_option(c("-f", "--seurat.file"), type = 'character',
+#               default='', help="Path to Seurat file"),
+#   make_option(c("-g", "--group.var"), type = 'character', 
+#               help="Grouping variable(s) in meta.data object separated by colon",
+#               default = 'sample'),
+#   make_option(c("-a", "--assay"), type = 'character',
+#               help = "Assay to use", default = 'SCTmerged'),
+#   make_option(c("--grnboost_network.file"), type = 'character',
+#               default='', help="grnboost network data file"),
+#   make_option(c("-p", "--project.folder"), type = 'character',
+#               default='', help="path to project_directory"))
+
 opt <- parse_args(OptionParser(option_list=option_list))
-
-library(networkD3, lib.loc=sprintf("%s/lib", opt$project.folder))
-
+if (opt$grntools != "No tools were chosen for GRN Inference") {
+  opt$grntools <- c("NA", opt$grntools)
+}
+library(networkD3, lib.loc=sprintf("%s/lib", opt$project.path))
 colors <- c("#cc79a7", "#009e73", "#0072b2")
-network.files <- list.files(path = paste(opt$results.path, "networks", sep="/"))
-keys <- c()
-tools <- c()
-for (file in network.files) {
-  key <- gsub(file, pattern="-.*", replacement="")
-  keys <- c(keys, key)
+# network.files <- list.files(path = paste(opt$results.path, "networks", sep="/"))
+# keys <- c()
+# tools <- c()
 
-  tool <- gsub(file, pattern=".*-(.*)-.*", replacement="\\1")
-  tools <- c(tools, tool) 
+configuration <- data.table(key = NULL, assay = NULL, group_var = NULL, condition_names = NULL, tools = NULL, network_files = NULL)
+
+# parse selection
+selections <- strsplit(opt$selection, "-")[[1]]
+# get condition names first
+
+conditions <- list()
+for (s in selections) {
+  key <- strsplit(s, ",")[[1]][1]
+  condition_name <- strsplit(s, ",")[[1]][4]
+  conditions[[key]] <- c(conditions[[key]], condition_name)
 }
-keys <- unique(keys)
-tools <- unique(tools)
 
-data.files <- c()
-gexp_condition_names <- c()
-for(key in keys) {
-  files <- list.files(path = paste(opt$results.path, key, sep="/")) 
-  tmp <- list.files(path = paste(opt$results.path, key, sep="/"), full.names = TRUE)
-  files <- c(data.files, files[!file.info(tmp)$isdir])  
-  for (file in files) {
-    data.files <- c(data.files, paste(key, file, sep="/"))
-  }
 
-  metaCells_condition1.file <- files[1]
-  metaCells_condition2.file <- files[2]
+for (s in selections) {
+  key <- strsplit(s, ",")[[1]][1]
+  assay <- strsplit(s, ",")[[1]][2]
+  group_var <- strsplit(s, ",")[[1]][3]
 
-  gexp_condition1_name <- gsub(basename(metaCells_condition1.file), pattern="\\.tsv$|\\.csv)", replacement="")
-  gexp_condition1_name <- gsub(gexp_condition1_name, pattern="^out_", replacement="")
-  gexp_condition1_name <- gsub(gexp_condition1_name, pattern="_", replacement=" ")
+  all_files <- list.files(path = file.path(opt$results.path, key), full.names = TRUE, recursive = TRUE)
+  network_files <- c(grep("aggregated_filtered_network", all_files, value = TRUE))
+  network_files <- paste(network_files, collapse = ",")
 
-  gexp_condition2_name <- gsub(basename(metaCells_condition2.file), pattern="\\.tsv$|\\.csv)", replacement="")
-  gexp_condition2_name <- gsub(gexp_condition2_name, pattern="^out_", replacement="")
-  gexp_condition2_name <- gsub(gexp_condition2_name, pattern="_", replacement=" ")
+  tools <- list.dirs(path = file.path(opt$results.path, key), full.names = FALSE, recursive = FALSE)
+  tools <- paste(tools, collapse = ",")
 
-  gexp_condition_names <- c(gexp_condition_names, gexp_condition1_name, gexp_condition2_name)
+  cond <- sort(paste(conditions[[key]], collapse = ","), decreasing = FALSE)
+
+  config <- list(key = key, assay = assay, group_var = group_var, tools = tools, condition_names = cond, network_files = network_files)
+  configuration <- rbind(configuration, config)
 }
-print(data.files)
-gexp_condition_names <- sort(gexp_condition_names, decreasing = FALSE) # just to get the matching ordering with matching colours :)
-names(colors) <- gexp_condition_names
 
-# if (gexp_condition_names[1] == gexp_condition1_name) {  
-#   gexp_condition1 <- read.table(file = metaCells_condition1.file, sep = "\t", header = TRUE)
-#   gexp_condition2 <- read.table(file = metaCells_condition2.file, sep = "\t", header = TRUE)
-# } else {
-#   gexp_condition1 <- read.table(file = metaCells_condition2.file, sep = "\t", header = TRUE)
-#   gexp_condition2 <- read.table(file = metaCells_condition1.file, sep = "\t", header = TRUE)
+configuration <- unique(configuration)
+print(configuration)
+
+
+# for (file in network.files) {
+#   key <- gsub(file, pattern="-.*", replacement="")
+#   keys <- c(keys, key)
+
+#   tool <- gsub(file, pattern=".*-(.*)-.*", replacement="\\1")
+#   tools <- c(tools, tool) 
 # }
-###########
+# keys <- unique(keys)
+# tools <- unique(tools)
+
+# data.files <- c()
+# gexp_condition_names <- c()
+# for(key in keys) {
+#   files <- list.files(path = paste(opt$results.path, key, sep="/")) 
+#   tmp <- list.files(path = paste(opt$results.path, key, sep="/"), full.names = TRUE)
+#   files <- c(data.files, files[!file.info(tmp)$isdir])  
+#   for (file in files) {
+#     data.files <- c(data.files, paste(key, file, sep="/"))
+#   }
+
+#   metaCells_condition1.file <- files[1]
+#   metaCells_condition2.file <- files[2]
+
+#   gexp_condition1_name <- gsub(basename(metaCells_condition1.file), pattern="\\.tsv$|\\.csv)", replacement="")
+#   gexp_condition1_name <- gsub(gexp_condition1_name, pattern="^out_", replacement="")
+#   gexp_condition1_name <- gsub(gexp_condition1_name, pattern="_", replacement=" ")
+
+#   gexp_condition2_name <- gsub(basename(metaCells_condition2.file), pattern="\\.tsv$|\\.csv)", replacement="")
+#   gexp_condition2_name <- gsub(gexp_condition2_name, pattern="^out_", replacement="")
+#   gexp_condition2_name <- gsub(gexp_condition2_name, pattern="_", replacement=" ")
+
+#   gexp_condition_names <- c(gexp_condition_names, gexp_condition1_name, gexp_condition2_name)
+# }
+# print(data.files)
+# gexp_condition_names <- sort(gexp_condition_names, decreasing = FALSE) # just to get the matching ordering with matching colours :)
+# names(colors) <- gexp_condition_names
+
+# # if (gexp_condition_names[1] == gexp_condition1_name) {  
+# #   gexp_condition1 <- read.table(file = metaCells_condition1.file, sep = "\t", header = TRUE)
+# #   gexp_condition2 <- read.table(file = metaCells_condition2.file, sep = "\t", header = TRUE)
+# # } else {
+# #   gexp_condition1 <- read.table(file = metaCells_condition2.file, sep = "\t", header = TRUE)
+# #   gexp_condition2 <- read.table(file = metaCells_condition1.file, sep = "\t", header = TRUE)
+# # }
+# ###########
 
 ########### Loading Seurat object, filtering the correct cells and performing differential testing
 adata <- readRDS(opt$seurat.file)
 # adata <- adata$all
 
 # Set grouping var to Armstrong vs Docile
-opt$group.var<-strsplit(opt$group.var, ':')[[1]]
+group.var<-strsplit(configuration[1]$group_var, ':')[[1]]
 
-Idents(adata)<-opt$group.var
-
+Idents(adata)<-group.var
 #### ADD SOME CONVENIENCE VARIABLES
 factor_groups<-names(which(sapply(adata@meta.data, class)=='factor'))
-# print(factor_groups) 
 ###########
 
 ui <- 
   navbarPage(
-    theme = shinytheme("cerulean"), title = "inter-net explorer :D", 
+    theme = shinytheme("cerulean"), title = "InterNet Xplorer", 
     tabPanel("Differential Network Analysis",
       sidebarLayout(
         mainPanel(
@@ -117,22 +171,22 @@ ui <-
             htmltools::div(
               style = "padding: 10px; background-color: white;",
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-              sprintf("Stronger in %s (Activator)", gexp_condition_names[1]),
+              sprintf("Stronger in %s (Activator)", strsplit(configuration$condition_names, ",")[[1]][1]),
               htmltools::br(),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-              sprintf("Stronger in %s (Repressor)", gexp_condition_names[1]),
+              sprintf("Stronger in %s (Repressor)", strsplit(configuration$condition_names, ",")[[1]][1]),
               htmltools::br(),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-              sprintf("Stronger in %s (Activator)", gexp_condition_names[2]),
+              sprintf("Stronger in %s (Activator)", strsplit(configuration$condition_names, ",")[[1]][2]),
               htmltools::br(),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-              sprintf("Stronger in %s (Repressor)", gexp_condition_names[2]),
+              sprintf("Stronger in %s (Repressor)", strsplit(configuration$condition_names, ",")[[1]][2]),
               htmltools::br(),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[3])),
               sprintf("Base GRN edge"),
@@ -146,10 +200,10 @@ ui <-
             # h3("Options:"),
             column(3,
               selectInput(
-                'Condition_pick',
-                "Choose condition to display DiffGRN/GRN for:",
-                choices = c("NA", keys),
-                selected = "NA",
+                'Key_pick',
+                "Choose key to display DiffGRN/GRN for:",
+                choices = c(configuration$key),
+                selected = configuration$key[1],
                 multiple = FALSE,
                 selectize = TRUE,
                 width = NULL,
@@ -158,8 +212,8 @@ ui <-
               selectInput(
                 'DiffGRN_pick',
                 "Choose DiffGRN to display:",
-                choices = c(tools),
-                selected = tools[1],
+                choices = c(opt$dgrntools),
+                selected = opt$dgrntools[1],
                 multiple = FALSE,
                 selectize = TRUE,
                 width = NULL,
@@ -168,8 +222,8 @@ ui <-
               selectInput(
                 'GRN_pick',
                 'Choose GRN to display:',
-                choices = c("NA", "grnboost2"),
-                selected = "NA",
+                choices = c(opt$grntools),
+                selected = opt$grntools[1],
                 multiple = FALSE,
                 selectize = TRUE,
                 width = NULL,
@@ -318,9 +372,9 @@ ui <-
 
 server <- function(input, output, session) {
   observe_helpers(withMathJax = TRUE)
-  # The forcenetwork needs to be a reactive value to change the node/link values
+#   # The forcenetwork needs to be a reactive value to change the node/link values
 
-  displayed_network <- reactiveValues(display_condition = NULL, data_cond1 = NULL, data_cond2 = NULL, diffGRN_data = NULL, base_GRN_data = NULL, network_data = NULL, fn = NULL, conditions = NULL, links = NULL)
+  displayed_network <- reactiveValues(display_condition = NULL, data_cond1 = NULL, data_cond2 = NULL, diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, fn = NULL, conditions = NULL, links = NULL)
 
   create_network <- function() {
     links <- data.frame(source = displayed_network$network_data[, 2], target = displayed_network$network_data[, 1], width=displayed_network$network_data[, 3]*100, stringsAsFactors=F)
@@ -359,75 +413,69 @@ server <- function(input, output, session) {
       fn$x$links$existsInComparisonGRN <- do.call(paste0, displayed_network$links[, 1:2]) %in% do.call(paste0, comparison_network)
       fn$x$nodes$existsInComparisonGRN <- fn$x$nodes$name %in% comparison_nodes
     }
-
-    # TODO: Change conditions so that the differential conditions are always first  
-    displayed_network$conditions <- sort(unique(displayed_network$network_data$condition), decreasing = FALSE)
     displayed_network$fn <- fn
   }
-  ### Observer Event for selecting the "background" GRN to display -> changes the complete network -> causes reload ###
-  observeEvent(input$Condition_pick, {
-    if (input$Condition_pick != "NA") {
-      displayed_network$display_condition <- input$Condition_pick
-      files <- list.files(path = paste(opt$results.path, input$Condition_pick, sep="/")) 
-      tmp <- list.files(path = paste(opt$results.path, input$Condition_pick, sep="/"), full.names = TRUE)
-      files <- c(data.files, files[!file.info(tmp)$isdir])  
-      for (file in files) {
-        data.files <- c(data.files, paste(key, file, sep="/"))
-      }
-
-      displayed_network$data_cond1 <- read.table(file = data.files[1], sep = "\t", header = TRUE)
-      displayed_network$data_cond2 <- read.table(file = data.files[2], sep = "\t", header = TRUE)
-
-      if (input$DiffGRN_pick == "boostdiff") {
-        network.name <- paste(input$Condition_pick, input$DiffGRN_pick, "network.txt", sep="-")
-        displayed_network$diffGRN_network_data <- read.table(file = paste(opt$results.path, "networks", network.name, sep="/"), header = TRUE)
-        displayed_network$network_data <- displayed_network$diffGRN_network_data
-      }    
-      create_network()
-    }
-
+#   ### Observer Event for selecting the "background" GRN to display -> changes the complete network -> causes reload ###
+  
+  
+  ## Observer event for selecting the comparison key 
+  observeEvent(input$Key_pick, {
+    # setting base network if key is switched
+    network.files <- strsplit(configuration[configuration$key == input$Key_pick,]$network_files, ",")[[1]]
+    displayed_network$network_data <- read.table(file = network.files[1], header = TRUE)
+    displayed_network$conditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
+    updateTextInput(session, "DiffGRN_pick", value=opt$dgrntools[1])
+    updateTextInput(session, "GRN_pick", value=opt$grntools[1])
+    create_network()
   })
   
   observeEvent(input$DiffGRN_pick, {
-
-    if (input$Condition_pick != "NA") {
-      if (input$DiffGRN_pick == "boostdiff") {
-        network.name <- paste(input$Condition_pick, input$DiffGRN_pick, "network.txt", sep="-")
-        displayed_network$diffGRN_network_data <- read.table(file = paste(opt$results.path, "networks", network.name, sep="/"))
-        if (!is.null(displayed_network$base_GRN_data)) {
-          displayed_network$network_data <- rbind(displayed_network$diffGRN_network_data, displayed_network$base_GRN_data)
-          displayed_network$network_data[[1]] <-  str_to_title(displayed_network$network_data[[1]])
-          displayed_network$network_data[[2]] <-  str_to_title(displayed_network$network_data[[2]])
-        } else {
-          displayed_network$network_data <- displayed_network$diffGRN_network_data
-        }
-        create_network()
+    if (input$DiffGRN_pick != "No tools were chosen for DGRN Inference") {
+      all_network.files <- strsplit(configuration[configuration$key == input$Key_pick,]$network_files, ",")[[1]]
+      # finding the correct network based on input$Key_pick and input$DiffGRN_pick
+      network.file <- grep(paste(input$Key_pick, input$DiffGRN_pick, sep="/"), all_network.files, value = TRUE)
+      displayed_network$diffGRN_network_data <- read.table(file = network.file, header = TRUE)
+      displayed_network$conditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
+      if (!is.null(displayed_network$GRN_network_data)) {
+        displayed_network$network_data <- rbind(displayed_network$diffGRN_network_data, displayed_network$GRN_network_data)
+        displayed_network$network_data[[1]] <-  str_to_title(displayed_network$network_data[[1]])
+        displayed_network$network_data[[2]] <-  str_to_title(displayed_network$network_data[[2]])
+      } else {
+        displayed_network$network_data <- displayed_network$diffGRN_network_data
       }
+      create_network()
     }
   })
   
   observeEvent(input$GRN_pick, {
-    if (input$Condition_pick != "NA") {
-      if (input$GRN_pick == "NA") {
-        displayed_network$base_GRN_data <- NULL
-      } else {
-        if(input$GRN_pick == "GRNBoost2") {
-          displayed_network$base_GRN_data <- read.table(file = opt$grnboost_network.file, sep = "\t", header = TRUE)
-          displayed_network$base_GRN_data$condition <- 'grnboost2_all_conditions'
-          colnames(displayed_network$base_GRN_data)[2] <- "regulator"
-          displayed_network$base_GRN_data <- displayed_network$base_GRN_data[, c("target", "regulator", "weight", "condition", "effect")]
+    if (input$GRN_pick != "No tools were chosen for GRN Inference") {  
+      if (input$GRN_pick != "NA") {
+        all_network.files <- strsplit(configuration[configuration$key == input$Key_pick,]$network_files, ",")[[1]]
+        # finding the correct network based on input$Key_pick and input$DiffGRN_pick
+        network.file <- grep(paste(input$Key_pick, input$GRN_pick, sep="/"), all_network.files, value = TRUE)
+        displayed_network$GRN_network_data <- read.table(file = network.file, header = TRUE)
+        ## TODO!: Fix this in the pipeline so that the network matrices all have the same order/name of columns
+        # adjusting column order and name to fit boostdiff column names and order 
+        displayed_network$GRN_network_data["condition"] <- input$GRN_pick
+        displayed_network$GRN_network_data <- displayed_network$GRN_network_data[, c(1,2,3,5,4)]
+        colnames(displayed_network$GRN_network_data)[colnames(displayed_network$GRN_network_data) == "TF"] <- "regulator"
+        ##
+        if (!is.null(displayed_network$diffGRN_network_data)) {
+          displayed_network$network_data <- rbind(displayed_network$diffGRN_network_data, displayed_network$GRN_network_data)
+          displayed_network$network_data[[1]] <-  str_to_title(displayed_network$network_data[[1]])
+          displayed_network$network_data[[2]] <-  str_to_title(displayed_network$network_data[[2]])
+        } else {
+          displayed_network$network_data <- displayed_network$GRN_network_data
         }
-
-        displayed_network$network_data <- rbind(displayed_network$diffGRN_network_data, displayed_network$base_GRN_data)
-        displayed_network$network_data[[1]] <-  str_to_title(displayed_network$network_data[[1]])
-        displayed_network$network_data[[2]] <-  str_to_title(displayed_network$network_data[[2]])
-
-        create_network()
+      } else {
+        displayed_network$GRN_network_data <- NULL
+        displayed_network$network_data <- displayed_network$diffGRN_network_data
       }
+      create_network()
     }
   })
 
-   ### render displayed force network ###
+#    ### render displayed force network ###
   output$net <- renderForceNetwork(
     fnrender <- htmlwidgets::onRender(
       displayed_network$fn,
@@ -489,226 +537,227 @@ server <- function(input, output, session) {
     )
   )
  
-  output$geneLink <- renderUI({
-    url <- a(sprintf("Genecard %s link", input$id_node), href=sprintf("https://www.genecards.org/cgi-bin/carddisp.pl?gene=%s", input$id_node), target="_blank")
-    tagList(sprintf("%s: ", input$id_node), url)
-  })
+#   output$geneLink <- renderUI({
+#     url <- a(sprintf("Genecard %s link", input$id_node), href=sprintf("https://www.genecards.org/cgi-bin/carddisp.pl?gene=%s", input$id_node), target="_blank")
+#     tagList(sprintf("%s: ", input$id_node), url)
+#   })
 
-  observeEvent(input$comparison_grn_file, {
-    comparison_network <- read.table(input$comparison_grn_file$datapath, sep = ",", header = TRUE)[, 2:3]
-    comparison_nodes <- unique(c(comparison_network[, 1], comparison_network[, 2]))
-    print(head(displayed_network$links[, 1:2]))
-    displayed_network$fn$x$links$existsInComparisonGRN <- do.call(paste0, displayed_network$links[, 1:2]) %in% do.call(paste0, comparison_network)
-    displayed_network$fn$x$nodes$existsInComparisonGRN <- displayed_network$fn$x$nodes$name %in% comparison_nodes 
-  })
+#   observeEvent(input$comparison_grn_file, {
+#     comparison_network <- read.table(input$comparison_grn_file$datapath, sep = ",", header = TRUE)[, 2:3]
+#     comparison_nodes <- unique(c(comparison_network[, 1], comparison_network[, 2]))
+#     print(head(displayed_network$links[, 1:2]))
+#     displayed_network$fn$x$links$existsInComparisonGRN <- do.call(paste0, displayed_network$links[, 1:2]) %in% do.call(paste0, comparison_network)
+#     displayed_network$fn$x$nodes$existsInComparisonGRN <- displayed_network$fn$x$nodes$name %in% comparison_nodes 
+#   })
 
-  observeEvent(input$comparison_grn_switch_edges, {
-    if(is.null(input$comparison_grn_file)) {
-      return(NULL)
-    }
-    displayed_network$fn$x$links$comparisonGRNSwitch <- input$comparison_grn_switch_edges
-  })
+#   observeEvent(input$comparison_grn_switch_edges, {
+#     if(is.null(input$comparison_grn_file)) {
+#       return(NULL)
+#     }
+#     displayed_network$fn$x$links$comparisonGRNSwitch <- input$comparison_grn_switch_edges
+#   })
 
-  observeEvent(input$comparison_grn_switch_nodes, {
-    if(is.null(input$comparison_grn_file)) {
-      return(NULL)
-    }
-    displayed_network$fn$x$nodes$comparisonGRNSwitch <- input$comparison_grn_switch_nodes
-  })
+#   observeEvent(input$comparison_grn_switch_nodes, {
+#     if(is.null(input$comparison_grn_file)) {
+#       return(NULL)
+#     }
+#     displayed_network$fn$x$nodes$comparisonGRNSwitch <- input$comparison_grn_switch_nodes
+#   })
   
-  plot_linear_model <- function(x, y, conditions, title) {
-    df <- data.frame(
-      x = x,
-      y = y,
-      Condition = conditions
-    )
-    if (sum(is.na(df)) > 0.9 * nrow(df)) { # dont plot anything if there are more than 90% NA values in the dataframe
-      return(NULL)
-    }
-    # print(df)
-    plot <- ggplot(df, aes(x = x, y = y, colour = Condition)) +
-      geom_point() +
-      scale_colour_manual(values = unname(colors)) +
-      geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) + 
-      ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
+#   plot_linear_model <- function(x, y, conditions, title) {
+#     df <- data.frame(
+#       x = x,
+#       y = y,
+#       Condition = conditions
+#     )
+#     if (sum(is.na(df)) > 0.9 * nrow(df)) { # dont plot anything if there are more than 90% NA values in the dataframe
+#       return(NULL)
+#     }
+#     # print(df)
+#     plot <- ggplot(df, aes(x = x, y = y, colour = Condition)) +
+#       geom_point() +
+#       scale_colour_manual(values = unname(colors)) +
+#       geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) + 
+#       ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
 
-    plot <- plot + 
-      theme_classic() +
-      labs(x = "Source gene", y = "Target gene") + 
-      theme(axis.title = element_text(size = 14), 
-            axis.text = element_text(size = 12),
-            legend.text = element_text(size = 12),
-            legend.title = element_text(size = 14),
-            plot.title = element_text(size = 15)) +
-      scale_x_continuous(limits = c(0, 5.5)) + scale_y_continuous(limits = c(0, 5.5))
-    return(plot)
-  }
+#     plot <- plot + 
+#       theme_classic() +
+#       labs(x = "Source gene", y = "Target gene") + 
+#       theme(axis.title = element_text(size = 14), 
+#             axis.text = element_text(size = 12),
+#             legend.text = element_text(size = 12),
+#             legend.title = element_text(size = 14),
+#             plot.title = element_text(size = 15)) +
+#       scale_x_continuous(limits = c(0, 5.5)) + scale_y_continuous(limits = c(0, 5.5))
+#     return(plot)
+#   }
   
 
-  # Violin and linear model plot for the shown DiffGRN
+# Violin and linear model plot for the shown DiffGRN
   output$violin_plot <- renderPlot({
     if (is.null(input$id_node)) {
       print("Select a node!")
       return(NULL)
     }
     Idents(adata)<-'group' # TODO this is hardcoded potentially problematic
-    condition_names<-sapply(gexp_condition_names, function(x) gsub(pattern = '_', replacement = ' ', x))
-    plot<-VlnPlot(adata, features = isolate(input$id_node), idents = condition_names, cols = colors, y.max=4)
+    condition_names<-sapply(displayed_network$conditions, function(x) gsub(pattern = '_', replacement = ' ', x))
+    plot<-VlnPlot(adata, features = str_to_title(isolate(input$id_node)), idents = condition_names, cols = colors, y.max=4)
     output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
   })
 
-  output$linear_model_plot <- renderPlot({    
-    if (is.null(input$id_source)) {
-      print("Select an edge!")
-      return(NULL)
-    }
-    expr1_x <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_source, -1])    
-    expr1_y <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_target, -1])    
-    expr2_x <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_source, -1])    
-    expr2_y <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_target, -1])
-    x <- c(expr1_x, expr2_x)
-    y <- c(expr1_y, expr2_y)
-    conditions <- c(rep(gexp_condition_names[1], length(expr1_x)), rep(gexp_condition_names[2], length(expr2_x)))
-    title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, gexp_condition_names[1], gexp_condition_names[2])
+  # output$linear_model_plot <- renderPlot({    
+  #   if (is.null(input$id_source)) {
+  #     print("Select an edge!")
+  #     return(NULL)
+  #   }
 
-    plot <- plot_linear_model(x, y, conditions, title)
-    output$downloadGRNLinearModelPlot <- download_plot(plot, title)
+  #   expr1_x <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_source, -1])    
+  #   expr1_y <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_target, -1])    
+  #   expr2_x <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_source, -1])    
+  #   expr2_y <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_target, -1])
+  #   x <- c(expr1_x, expr2_x)
+  #   y <- c(expr1_y, expr2_y)
+  #   conditions <- c(rep(gexp_condition_names[1], length(expr1_x)), rep(gexp_condition_names[2], length(expr2_x)))
+  #   title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, gexp_condition_names[1], gexp_condition_names[2])
 
-    plot
-  })
+  #   plot <- plot_linear_model(x, y, conditions, title)
+  #   output$downloadGRNLinearModelPlot <- download_plot(plot, title)
+
+  #   plot
+  # })
   
 
-  ### Comparison Plots ###
-  output$comparison_violin_plot <- renderPlot({
-    if (is.null(input$id_node) || 
-        is.null(input$selection_dropdown) || 
-        is.null(input$clusters_pick) ||
-        length(input$selection_dropdown) < 2 
-    ) { # only plot if all three values are set and atleast 2 cases are selected
-      print("Select a node, two cases in the selection dropdown menu and atleast one cluster!")
-      return(NULL)
-    }
-    input$compare_button
+#   ### Comparison Plots ###
+  # output$comparison_violin_plot <- renderPlot({
+  #   if (is.null(input$id_node) || 
+  #       is.null(input$selection_dropdown) || 
+  #       is.null(input$clusters_pick) ||
+  #       length(input$selection_dropdown) < 2 
+  #   ) { # only plot if all three values are set and atleast 2 cases are selected
+  #     print("Select a node, two cases in the selection dropdown menu and atleast one cluster!")
+  #     return(NULL)
+  #   }
+  #   input$compare_button
 
-    cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
-    Idents(adata)<-'group' # TODO this is hardcoded potentially problematic
-    asub<-subset(adata, subset = cluster %in% isolate(input$clusters_pick))
-    condition_names<-sapply(isolate(input$selection_dropdown), function(x) gsub(pattern = '_', replacement = ' ', x))
-    condition_names <- sort(condition_names, decreasing=FALSE)
-    cols <- colors
-    names(cols) <- c(gsub(pattern = '_', replacement = ' ',  condition_names[1]), gsub(pattern = '_', replacement = ' ',  condition_names[2])) 
-    plot <- VlnPlot(asub, features = isolate(input$id_node), idents = condition_names, cols = cols, y.max=4)
-    output$downloadComparisonViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
-    plot
-  })
+  #   cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
+  #   Idents(adata)<-'group' # TODO this is hardcoded potentially problematic
+  #   asub<-subset(adata, subset = cluster %in% isolate(input$clusters_pick))
+  #   condition_names<-sapply(isolate(input$selection_dropdown), function(x) gsub(pattern = '_', replacement = ' ', x))
+  #   condition_names <- sort(condition_names, decreasing=FALSE)
+  #   cols <- colors
+  #   names(cols) <- c(gsub(pattern = '_', replacement = ' ',  condition_names[1]), gsub(pattern = '_', replacement = ' ',  condition_names[2])) 
+  #   plot <- VlnPlot(asub, features = isolate(input$id_node), idents = condition_names, cols = cols, y.max=4)
+  #   output$downloadComparisonViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
+  #   plot
+  # })
   
 
-  output$comparison_linear_model_plot <- renderPlot({
-    if (is.null(input$id_source) || 
-        is.null(input$selection_dropdown) || 
-        is.null(input$clusters_pick) ||
-        length(input$selection_dropdown) < 2 
-    ) { # only plot if all three values are set
-      print("Select an edge, two cases in the selection dropdown menu and atleast one cluster!")
-      return(NULL)
-    }
-    input$compare_button
-    doc_data <- NULL
-    arm_data <- NULL
+#   output$comparison_linear_model_plot <- renderPlot({
+#     if (is.null(input$id_source) || 
+#         is.null(input$selection_dropdown) || 
+#         is.null(input$clusters_pick) ||
+#         length(input$selection_dropdown) < 2 
+#     ) { # only plot if all three values are set
+#       print("Select an edge, two cases in the selection dropdown menu and atleast one cluster!")
+#       return(NULL)
+#     }
+#     input$compare_button
+#     doc_data <- NULL
+#     arm_data <- NULL
     
-    condition_names <- isolate(input$selection_dropdown)
+#     condition_names <- isolate(input$selection_dropdown)
 
-    selection<-c()
-    for(i in isolate(input$selection_dropdown)){
-      relevant<- as.character(unique(as.data.table(adata@meta.data)[group==i]$sample))
-      relevant<- sapply(relevant, function(x) gsub(x, pattern=' ', replacement=':'))
-      relevant<-paste0(relevant, collapse = ',')
-      selection<-c(selection, relevant)
-    }
-    # print(selection)
+#     selection<-c()
+#     for(i in isolate(input$selection_dropdown)){
+#       relevant<- as.character(unique(as.data.table(adata@meta.data)[group==i]$sample))
+#       relevant<- sapply(relevant, function(x) gsub(x, pattern=' ', replacement=':'))
+#       relevant<-paste0(relevant, collapse = ',')
+#       selection<-c(selection, relevant)
+#     }
+#     # print(selection)
     
-    clusters <- isolate(input$clusters_pick)
-    cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
-    n.samples <- 30           # TODO: Same as line above, make it flexible (also hardcoded in boostdiff.nf), however does not break as line above if not flexible and changed
-    p.missing <- 10           # Hardcoded in create_metacells.R (not set in boostdiff.nf) 
+#     clusters <- isolate(input$clusters_pick)
+#     cluster.name <- 'cluster' # !!! This only works if the cluster_id is also 'cluster' in boostdiff.nf -> TODO: make it flexible
+#     n.samples <- 30           # TODO: Same as line above, make it flexible (also hardcoded in boostdiff.nf), however does not break as line above if not flexible and changed
+#     p.missing <- 10           # Hardcoded in create_metacells.R (not set in boostdiff.nf) 
     
-    # print(clusters)
-    for (s in selection) {
-      s <- strsplit(s, ',')
-      s <- unname(sapply(s, function(x) strsplit(x ,":")))
+#     # print(clusters)
+#     for (s in selection) {
+#       s <- strsplit(s, ',')
+#       s <- unname(sapply(s, function(x) strsplit(x ,":")))
       
-      meta.cell.dfs<-list()
-      meta.cell.df<-NULL
-      for (g in 1:length(s)){
-        # Create a subset of the required data
-        select.cells<-list()
-        # first criterion
-        select.cells <- which(adata@meta.data[, opt$group.var[1]]==s[[g]][1])
-        # select metadata categories
-        for (i in 2:length(opt$group.var)){
-          select.cells<-intersect(select.cells, which(adata@meta.data[, opt$group.var[i]]==s[[g]][i]))
-        }
+#       meta.cell.dfs<-list()
+#       meta.cell.df<-NULL
+#       for (g in 1:length(s)){
+#         # Create a subset of the required data
+#         select.cells<-list()
+#         # first criterion
+#         select.cells <- which(adata@meta.data[, opt$group.var[1]]==s[[g]][1])
+#         # select metadata categories
+#         for (i in 2:length(opt$group.var)){
+#           select.cells<-intersect(select.cells, which(adata@meta.data[, opt$group.var[i]]==s[[g]][i]))
+#         }
         
-        # select clusters (multiple)
-        select.cells<-intersect(select.cells, which(adata@meta.data[, cluster.name] %in% as.numeric(clusters)))
+#         # select clusters (multiple)
+#         select.cells<-intersect(select.cells, which(adata@meta.data[, cluster.name] %in% as.numeric(clusters)))
         
         
-        subset<-subset(adata, cells = select.cells)
-        # Find number of barcodes in object
-        n.cells<-nrow(subset@meta.data)
-        # Compute number of cells to aggregate
-        cells.p.metasample<-nrow(subset@meta.data)/n.samples
-        # randomly assign each of the cells to a group
-        subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
-        # Set the ident to the newly created meta.cell variable
-        Idents(subset)<-"meta.cell"
-        # Aggregate the expression
-        agg<-AggregateExpression(subset, slot = "data", return.seurat = T, assays = opt$assay)
+#         subset<-subset(adata, cells = select.cells)
+#         # Find number of barcodes in object
+#         n.cells<-nrow(subset@meta.data)
+#         # Compute number of cells to aggregate
+#         cells.p.metasample<-nrow(subset@meta.data)/n.samples
+#         # randomly assign each of the cells to a group
+#         subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
+#         # Set the ident to the newly created meta.cell variable
+#         Idents(subset)<-"meta.cell"
+#         # Aggregate the expression
+#         agg<-AggregateExpression(subset, slot = "data", return.seurat = T, assays = opt$assay)
 
-        # export the results
-        result.data.frame<-agg@assays[[opt$assay]]@data
-        row.names<-rownames(result.data.frame)
-        column.names<-paste0(paste0(s[[g]], collapse='_'), '_', colnames(result.data.frame))
-        result.data.frame<-as.data.table(result.data.frame)
-        result.data.frame<-cbind(row.names, result.data.frame)
-        colnames(result.data.frame)<-c('Gene', column.names)
-        if(is.null(meta.cell.df)){
-          meta.cell.df<-result.data.frame
-        }
-        else{
-          meta.cell.df<-merge(meta.cell.df, result.data.frame, by = 'Gene')
-        }
-      }
-      select<-which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(p.missing/100))
-      meta.cell.df<-meta.cell.df[select, ]
-      if(is.null(doc_data)) {
-        doc_data <- meta.cell.df     
-      } else {
-        arm_data <- meta.cell.df
-      }
-    }
+#         # export the results
+#         result.data.frame<-agg@assays[[opt$assay]]@data
+#         row.names<-rownames(result.data.frame)
+#         column.names<-paste0(paste0(s[[g]], collapse='_'), '_', colnames(result.data.frame))
+#         result.data.frame<-as.data.table(result.data.frame)
+#         result.data.frame<-cbind(row.names, result.data.frame)
+#         colnames(result.data.frame)<-c('Gene', column.names)
+#         if(is.null(meta.cell.df)){
+#           meta.cell.df<-result.data.frame
+#         }
+#         else{
+#           meta.cell.df<-merge(meta.cell.df, result.data.frame, by = 'Gene')
+#         }
+#       }
+#       select<-which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(p.missing/100))
+#       meta.cell.df<-meta.cell.df[select, ]
+#       if(is.null(doc_data)) {
+#         doc_data <- meta.cell.df     
+#       } else {
+#         arm_data <- meta.cell.df
+#       }
+#     }
     
-    gene_names <- intersect(doc_data$Gene, arm_data$Gene)
-    doc_data <- doc_data[Gene %in% gene_names]
-    arm_data <- arm_data[Gene %in% gene_names]      
+#     gene_names <- intersect(doc_data$Gene, arm_data$Gene)
+#     doc_data <- doc_data[Gene %in% gene_names]
+#     arm_data <- arm_data[Gene %in% gene_names]      
     
-    expr1_x <- as.numeric(doc_data[Gene == isolate(input$id_source), -1])    
-    expr1_y <- as.numeric(doc_data[Gene == isolate(input$id_target), -1])    
-    expr2_x <- as.numeric(arm_data[Gene == isolate(input$id_source), -1])    
-    expr2_y <- as.numeric(arm_data[Gene == isolate(input$id_target), -1])
+#     expr1_x <- as.numeric(doc_data[Gene == isolate(input$id_source), -1])    
+#     expr1_y <- as.numeric(doc_data[Gene == isolate(input$id_target), -1])    
+#     expr2_x <- as.numeric(arm_data[Gene == isolate(input$id_source), -1])    
+#     expr2_y <- as.numeric(arm_data[Gene == isolate(input$id_target), -1])
     
-    x <- c(expr1_x, expr2_x)
-    y <- c(expr1_y, expr2_y)
-    conditions <- c(rep(condition_names[1], length(expr1_x)), rep(condition_names[2], length(expr2_x)))
-    condition_names <- sort(condition_names, decreasing = FALSE) # just to get the same order of conditions names in the title
-    title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, condition_names[1], condition_names[2])
+#     x <- c(expr1_x, expr2_x)
+#     y <- c(expr1_y, expr2_y)
+#     conditions <- c(rep(condition_names[1], length(expr1_x)), rep(condition_names[2], length(expr2_x)))
+#     condition_names <- sort(condition_names, decreasing = FALSE) # just to get the same order of conditions names in the title
+#     title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, condition_names[1], condition_names[2])
       
-    plot <- plot_linear_model(x, y, conditions, title)
+#     plot <- plot_linear_model(x, y, conditions, title)
 
-    output$downloadComparisonLinearModelPlot <- download_plot(plot, title)
-    plot
-  })
+#     output$downloadComparisonLinearModelPlot <- download_plot(plot, title)
+#     plot
+#   })
 
   download_plot <- function(plot, filename) {
     downloadHandler(
@@ -739,7 +788,7 @@ server <- function(input, output, session) {
   })
   
   observe({
-    x = input$id_node
+    x = str_to_title(input$id_node)
     edit <- isolate(input$select_genes)
     if (length(edit)<12){
       selection<-c(edit, x)

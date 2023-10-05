@@ -18,7 +18,11 @@ option_list <- list(
   make_option(c("-e", "--output.file.1"), type = 'character',
               help="Input file"),
   make_option(c("-f", "--output.file.2"), type = 'character',
-              help="Input file"))
+              help="Input file"),
+  make_option(c("-k", "--key"), type = 'character',
+              help="Key fur run"),
+  make_option(c("-r", "--output.folder"), type = 'character',
+              help="Output folder"))
 
 # get command line options, if help option encountered print help and exit,
 # otherwise if options not found on command line then set defaults, 
@@ -34,6 +38,13 @@ data.2<-data.2[Gene %in% gene.names]
 
 data.1$Gene<-toupper(data.1$Gene)
 data.2$Gene<-toupper(data.2$Gene)
+
+
+# dir_path <- paste(opt$output.folder, opt$key, sep="/", collapse=NULL)
+# if (!dir.exists(dir_path)) {
+#   dir.create(dir_path, recursive = TRUE)
+# }
+
 
 fwrite(data.1, file = opt$output.file.1, sep='\t')
 fwrite(data.2, file = opt$output.file.2, sep='\t')

@@ -33,18 +33,28 @@ workflow {
   List<String> available_GRNInference_tools = params.available_GRNInference_tools.split(",")
   List<String> available_DGRNInference_tools = params.available_DGRNInference_tools.split(",")  
   List<String> tools = params.tools.split(",")
+  
+  diffgrn_tools = []
+  grn_tools = []
+
   tools.each { element -> 
-    if (!available_GRNInference_tools.contains(element) && !available_DGRNInference_tools.contains(element)) {
-          throw new Exception(element + " is not available. Please choose only a selection of the following tools: " + (available_GRNInference_tools + available_DGRNInference_tools))
+    if(available_DGRNInference_tools.contains(element)) {
+      diffgrn_tools.add(element)
+    } else if(available_GRNInference_tools.contains(element)) {
+      grn_tools.add(element)
+    } else {
+      throw new Exception(element + " is not available. Please choose only a selection of the following tools: " + (available_GRNInference_tools + available_DGRNInference_tools))
     }
   }
+
 
   data = LOAD_DATA(tools)
   networks = RUN_TOOLS(data, tools)
   networks.view()
   ANALYSIS(networks)
+  testing = SHINY_APP(diffgrn_tools, grn_tools)
+
   // // // TODO: Make NF pipeline creation of shiny App work with variable no. input network files and different data input formats
   // if (params.mode == "seurat") {
-  //   SHINY_APP(networks)
   // }
 }

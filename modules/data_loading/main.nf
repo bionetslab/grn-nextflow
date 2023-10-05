@@ -3,7 +3,7 @@ process CREATE_METACELLS_SEURAT {
 
   input:
   path seurat_object
-  tuple val (key), val (assay), val (selection_criteria_keys), val (selection_criteria), val(name), val (cluster_name), val (cluster_ids)
+  tuple val (key), val (assay), val (selection_criteria_keys), val(name), val (selection_criteria), val (cluster_name), val (cluster_ids)
   val mode
 
   output:
@@ -32,15 +32,35 @@ process CREATE_METACELLS_TSVFILES {
   
 }
 
+process CONVERT_SCANPY_TO_SEURAT {
+  label 'big_mem'
+
+  input:
+  path scanpy_object
+
+  output:
+  path ("seurat_object.rds")
+
+  script:
+  """
+  convert_scanpy_to_seurat.R -f $scanpy_object
+  """
+}
+
 process CHECK_FILES {
+  publishDir params.publish_dir
+
   input:
   tuple val (key), path (files)
   
   output:
-  tuple val (key), path ("out_${files[0]}"), path ("out_${files[1]}")
+  tuple val (key), path ("${key}/out_${files[0]}"), path ("${key}/out_${files[1]}")
+  // path ("${key}/out_${files[0]}")
+  // path ("${key}/out_${files[1]}")
 
   script:
   """
-  check_input_files.R -c ${files[0]} -d ${files[1]} -e out_${files[0]} -f out_${files[1]}
+  mkdir -p "${key}/"
+  check_input_files.R -c ${files[0]} -d ${files[1]} -e ${key}/out_${files[0]} -f ${key}/out_${files[1]} -k ${key} -r $params.publish_dir
   """
 }

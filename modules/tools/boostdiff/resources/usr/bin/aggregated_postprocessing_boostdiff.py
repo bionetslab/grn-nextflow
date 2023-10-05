@@ -156,15 +156,18 @@ def inh_or_act(file_condition, network, alpha=95):
             ge_regulator = df_cond2[df_cond2['Gene'] == regulator].iloc[:,1:].to_numpy().flatten()
             ge_target = df_cond2[df_cond2['Gene'] == target].iloc[:,1:].to_numpy().flatten()
 
-
+        # alpha capping
         threshold_regulator = np.percentile(ge_regulator, alpha)
         threshold_target = np.percentile(ge_target, alpha)
         
         outliers_mask_regulator = ge_regulator > threshold_regulator
         outliers_mask_target = ge_target > threshold_target
 
-        ge_regulator = ge_regulator[~outliers_mask_regulator]
-        ge_target = ge_target[~outliers_mask_target]
+        # elements have to be removed from both lists if it is removed from one list for linear regression
+        combined_mask = outliers_mask_regulator | outliers_mask_target
+
+        ge_regulator = ge_regulator[~combined_mask]
+        ge_target = ge_target[~combined_mask]
         
         slope, intercept = np.polyfit(ge_regulator, ge_target, 1)
         slopes.append(slope)

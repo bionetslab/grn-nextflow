@@ -1,5 +1,5 @@
 process RUN_TOOL {
-  maxForks params.boostdiff.n_processes
+  maxForks 4
   publishDir params.publish_dir
 
   input:

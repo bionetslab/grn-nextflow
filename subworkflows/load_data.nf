@@ -1,13 +1,12 @@
 include { SELECT_DATA } from './data_loading/create_metacells'
+include { CONVERT_TO_SEURAT } from '../../modules/data_loading/convert_to_seurat'
 
 workflow LOAD_DATA {
   take:
     tools
 
   main:
-    if (params.mode == "seurat") {
-      // TODO: Add some checks that verify a correct settings of the parameters 
-      // Transforms the config.yaml file into a list of the following structure [key, assay, covariate_config, covariate_config_keys, output_folder, filter_id, filter_value]
+    def read_config() {
       selection = []
       covariate_configs_keys = []        
       int selec_index_start = 0
@@ -76,8 +75,8 @@ workflow LOAD_DATA {
           }          
           for (int i = 0; i <= covariate_config_asColumnSeparatedList.size()-1; i++) {         
             selection[selec_index_start + i].add(covariate_config_keys[i].join(":"))
-            selection[selec_index_start + i].add(covariate_config_asColumnSeparatedList[i].join(","))
             selection[selec_index_start + i].add(output_files[i])
+            selection[selec_index_start + i].add(covariate_config_asColumnSeparatedList[i].join(","))
           }
 
           // adding two null values for name and id of a filter to match the input cardinality if the filter value is given
@@ -102,12 +101,26 @@ workflow LOAD_DATA {
         selec_index_start = selec_index_end
         selec_index_end = selec_index_start + 1
       }
-      
+      return selection
+    }
+    if (params.mode == "seurat") {
+      // TODO: Add some checks that verify a correct settings of the parameters 
+      selection = read_config()
       input_case_ch = Channel.fromList(selection)
       data = SELECT_DATA(params.mode, params.input, input_case_ch)
-    } else if(params.mode == "tsv"){
+
+    } else if(params.mode == "tsv") {
+      
       data_ch = Channel.of([params.comparison_id, [params.input_file1, params.input_file2]])
       data = SELECT_DATA(params.mode, data_ch, null)
+
+    } else if(params.mode == "scanpy") {
+      
+      seurat_file = CONVERT_TO_SEURAT(params.input)
+      selection = read_config()
+      input_case_ch = Channel.fromList(selection)
+      data = SELECT_DATA(params.mode, seurat_file, input_case_ch)
+
     } else {
       throw new Exception('Please select one of the following modes for the provided data: "seurat", "tsv"')
     }
