@@ -21,9 +21,6 @@ option_list <- list(
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
-opt$input.file.1 <- "/home/nicolai/Documents/Arbeit/InterNet_Xplorer/src/grn-nextflow/results/Arm_vs_Doc_D28:Liver/out_Arm_Liver_d28.tsv"
-opt$input.file.2 <- "/home/nicolai/Documents/Arbeit/InterNet_Xplorer/src/grn-nextflow/results/Arm_vs_Doc_D28:Liver/out_Doc_Liver_d28.tsv"
-
 cond_name_1 <- sub('.*out_', "", opt$input.file.1)
 cond_name_2 <- sub('.*out_', "", opt$input.file.2)
 
@@ -68,15 +65,17 @@ for(row in 1:nrow(edgedf)) {
         regulator_data <- as.numeric(data.2[data.2$Gene == regulator,2:ncol(data.2)])        
     }
 
-    # alpha capping
-    regulator_threshold <- quantile(regulator_data, probs=0.95)
-    target_threshold <- quantile(target_data, probs=0.95)
-    regulator_mask <- regulator_data < regulator_threshold
-    target_mask <- target_data < target_threshold
-    mask <- regulator_mask & target_mask
+    # outlier detection (|Z-score| > 2 -> outlier)
+    target_mean <- mean(target_data)
+    regulator_mean <- mean(regulator_data)
 
-    regulator_data <- regulator_data[mask]
-    target_data <- target_data[mask]
+    target_sd <- sd(target_data)
+    regulator_sd <- sd(regulator_data)
+
+    target_mask <- !(target_data > (target_mean + 2*target_sd) | target_data < (target_mean - 2*target_sd)) 
+    regulator_mask <- !(regulator_data > (regulator_mean + 2*regulator_sd) | regulator_data < (regulator_mean - 2*regulator_sd))
+
+    mask <- regulator_mask & target_mask 
 
     model <- lm(formula = regulator_data ~ target_data)
     edgedf[row,]$effect <- as.numeric(model$coefficients[2])

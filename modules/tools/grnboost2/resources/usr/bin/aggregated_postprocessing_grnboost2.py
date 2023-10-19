@@ -106,7 +106,20 @@ def inh_or_act(file1, file2, network):
         
         ge_regulator = list(expr_matrix.loc[regulator])
         ge_target = list(expr_matrix.loc[target])
+        
+        # outlier detection (|Z-score| > 2 -> outlier)
+        target_mean = np.mean(ge_target)
+        regulator_mean = np.mean(ge_regulator)
+        target_sd = np.std(ge_target)
+        regulator_sd = np.std(ge_regulator)
+        
+        target_mask = not(ge_target > (target_mean + 2*target_sd) or ge_target < (target_mean - 2*target_sd))
+        regulator_mask = not(ge_regulator > (regulator_mean + 2*regulator_sd) or ge_data < (regulator_mean - 2*regulator_sd))
+        combined_mask = target_mask | regulator_mask
 
+        ge_regulator = ge_regulator[~combined_mask]
+        ge_target = ge_target[~combined_mask]
+        
         slope, intercept = np.polyfit(ge_regulator, ge_target, 1)
         slopes.append(slope)
 
