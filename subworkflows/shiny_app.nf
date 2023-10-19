@@ -68,7 +68,7 @@ workflow SHINY_APP {
                 cov_index = cov_index + 1
               }
 
-              // Function of this: Duplicates list for every covariate configuration and enters the proper values for each list
+              // Duplicates list for every covariate configuration and enters the proper values for each list
               if (covariate_config_asColumnSeparatedList.size() > 1) {
                 selection.add([*selection[selec_index_start]])
                 selec_index_end = selec_index_end + 1
@@ -96,6 +96,9 @@ workflow SHINY_APP {
                     }
                   }
                 }
+                for (int i = selec_index_start; i < selec_index_end; i++) {
+                  selection[i].add("filter")
+                }
               }
             }
             selec_index_start = selec_index_end
@@ -106,10 +109,6 @@ workflow SHINY_APP {
 			    selection[i] = selection[i].join(",")
         }
         selection = selection.join("-")
-
-        println grn_tools
-        println diffgrn_tools
-        println selection
         if (grn_tools.size == 0) {
           grn_tools = ""
         } else {

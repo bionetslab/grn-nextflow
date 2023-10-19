@@ -121,6 +121,7 @@ if (opt$mode == "seurat") {
     # Compute number of cells to aggregate
     cells.p.metasample<-nrow(subset@meta.data)/n.samples
     # randomly assign each of the cells to a group
+    set.seed(1)
     subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
     # Set the ident to the newly created meta.cell variable
     Idents(subset)<-"meta.cell"
@@ -156,6 +157,7 @@ if (opt$mode == "seurat") {
   # Compute number of cells to aggregate
   cells.p.metasample <- n.cells/n.samples
   # randomly assign each of the cells to a group
+  set.seed(1)
   subset@meta.data$meta.cell <- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
   # Set the ident to the newly created meta.cell variable
   Idents(subset) <- "meta.cell"
@@ -175,4 +177,31 @@ if (opt$mode == "seurat") {
   # save the aggregated data frame into a tsv sheet
   fwrite(result.data.frame, file = file.path(opt$output.file), sep='\t')
 
+} else if (opt$mode == "anndata") {
+  adata <- readRDS(opt$input.file)
+  
+  # Find number of barcodes in object
+  n.cells <- nrow(adata@meta.data)
+  # Compute number of cells to aggregate
+  cells.p.metasample <- n.cells/n.samples
+  # randomly assign each of the cells to a group
+  set.seed(1)
+  adata@meta.data$meta.cell <- sample(nrow(adata@meta.data), size = nrow(adata@meta.data), replace = FALSE) %% n.samples
+  # Set the ident to the newly created meta.cell variable
+  Idents(adata) <- "meta.cell"
+  # Aggregate the expression
+  gexpr <- adata@assays[["RNA"]]@data
+  select<-which(rowSums(gexpr==0)/(ncol(gexpr)-1)<(opt$p.missing/100))
+  subset <- adata[select, ]
+  agg<-AggregateExpression(subset, return.seurat = T)
+  # export the results
+  result.data.frame<-agg@assays[["RNA"]]@data
+  row.names<-rownames(result.data.frame)
+  column.names<-paste("metaCell", 1:n.samples, sep="")
+  result.data.frame<-as.data.table(result.data.frame)
+  result.data.frame<-cbind(row.names, result.data.frame)
+  colnames(result.data.frame)<-c('Gene', column.names)
+  # result.data.frame<-result.data.frame[select, ]
+  # save the aggregated data frame into a tsv sheet
+  fwrite(result.data.frame, file = file.path(opt$output.file), sep='\t') 
 }

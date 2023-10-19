@@ -31,3 +31,4 @@ dependencies:
   - importlib-metadata
   - bioconductor-dcanr
   - bioconductor-ebcoexpress
+  - r-sceasy

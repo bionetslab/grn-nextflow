@@ -27,11 +27,9 @@ include { RUN_TOOLS } from './subworkflows/run_tools'
 include { ANALYSIS } from './subworkflows/analysis'
 include { SHINY_APP } from './subworkflows/shiny_app'
 
-
 workflow {
-  
-  List<String> available_GRNInference_tools = params.available_GRNInference_tools.split(",")
-  List<String> available_DGRNInference_tools = params.available_DGRNInference_tools.split(",")  
+  List<String> available_GRNInference_tools = ["grnboost2"]
+  List<String> available_DGRNInference_tools = ["boostdiff,z_score,diffcoex"]  
   List<String> tools = params.tools.split(",")
   
   diffgrn_tools = []
@@ -39,6 +37,9 @@ workflow {
 
   tools.each { element -> 
     if(available_DGRNInference_tools.contains(element)) {
+      if(params.grn_mode) {
+        throw new Exception(element + " cannot be used in grn_mode! Only GRN inference tools can be used in grn_mode.")
+      }
       diffgrn_tools.add(element)
     } else if(available_GRNInference_tools.contains(element)) {
       grn_tools.add(element)
@@ -47,12 +48,11 @@ workflow {
     }
   }
 
-
   data = LOAD_DATA(tools)
   networks = RUN_TOOLS(data, tools)
   networks.view()
   ANALYSIS(networks)
-  testing = SHINY_APP(diffgrn_tools, grn_tools)
+  SHINY_APP(diffgrn_tools, grn_tools)
 
   // // // TODO: Make NF pipeline creation of shiny App work with variable no. input network files and different data input formats
   // if (params.mode == "seurat") {

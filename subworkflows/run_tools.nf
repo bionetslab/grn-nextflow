@@ -30,6 +30,7 @@ workflow RUN_TOOLS {
                     networks.add(RUN_DIFFCOEX(data, runs))
                     break
                 
+                // This tool will probably not be supported because of too high runtime
                 case "ebcoexpress":
                     networks.add(RUN_EBCOEXPRESS(data, runs))
                     break

@@ -27,23 +27,38 @@ process CREATE_METACELLS_TSVFILES {
 
   script:
   """
-  create_metacells.R -f $tsv_file -o "aggregated_${tsv_file}" -n 30 -m $mode 
-  """
-  
+  create_metacells.R -f $tsv_file -o "aggregated_${tsv_file}" -n 100 -m $mode 
+  """  
 }
 
-process CONVERT_SCANPY_TO_SEURAT {
+process CREATE_METACELLS_ANNDATA {
   label 'big_mem'
 
   input:
-  path scanpy_object
+  path seurat_object 
+  val mode
+
+  output:
+  tuple val (key), path("aggregated_seurat_object.tsv")
+
+  script:
+  """
+  create_metacells.R -f $seurat_object -o "aggregated_seurat_object.tsv" -n 100 -m $mode
+  """
+}
+
+process CONVERT_ANNDATA_TO_SEURAT {
+  label 'big_mem'
+
+  input:
+  path anndata_object
 
   output:
   path ("seurat_object.rds")
 
   script:
   """
-  convert_scanpy_to_seurat.R -f $scanpy_object
+  convert_anndata_to_seurat.R -i $anndata_object
   """
 }
 

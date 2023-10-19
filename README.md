@@ -4,7 +4,7 @@
 ```
 curl -fsSL get.nextflow.io | bash
 ```
-2) Clone this repository and navigate to it:
+2) Clone the boostdiff repository and navigate to it:
 ```
 git clone git@github.com:bionetslab/boostdiff-nextflow.git && cd boostdiff-nextflow
 ```
@@ -26,54 +26,60 @@ See this pdf [Network Explanation](https://github.com/bionetslab/grn-nextflow/bl
 
 ## Running Inter-Net Xplorer
 This section describes piece by piece how to run this pipeline. Examples will be provided along the way and at the end of this section.
-### 1) Running the nextflow pipeline
-To run the the nextflow pipeline use the following command. 
+### 1) Running the nextflow pipeline:
+To run the the nextflow pipeline use the following command and swap out the parameters to fit your needs. The next sections go over the paramters in detail 
 ```
-${path_to_nextflow}/nextflow run main.nf --tools=${tools_to_run} --mode=${data_mode} --input=${data_input} -params-file ${config_file}
+${path_to_nextflow}/nextflow run main.nf --tools=${tools_to_run} --mode=${data_mode} --input=${data_input} -params-file ${config_file} --publish_dir=${output_data_path}
 ```
 
-### 2) Choosing ${tools_to_run} for GRN and DGRN inference
+### 2) Setting the `--tools` paramter:
 The `--tools` parameter needs to be set to identify the tools that are used in the pipeline. Current available tools are:
 * DGRN inference tools:
   * `boostdiff` (https://github.com/gihannagalindez/boostdiff_inference)
+  * `z-score` (https://doi.org/10.1371/journal.pone.0009202)
+  * `diffcoex` (https://doi.org/10.1186/1471-2105-11-497)
 * GRN inference tools:
   * `grnboost2` (https://academic.oup.com/bioinformatics/article/35/12/2159/5184284)
 
 The `--tools` parameter needs to be set as comma separated list. For example, if you want to use boostdiff and grnboost2 you need to set `--tools=boostdiff,grnboost2`   
 
-### 3) Choosing the ${data_mode}
-The `--mode` parameter needs to be set to identify the data that you are using. Currently availabe modes are `seurat` and `tsv`.
+### 3) Setting the `--mode` parameter:
+The `--mode` parameter needs to be set to identify the data that you are using. Currently availabe modes are `seurat`, `tsv` and `anndata`. 
 
-### 4) Specifying the ${data_input} file 
+### 4) Setting `--input` parameter:
 The full path has to be set for all input files!
 
-#### 4.1) Mode is set to "seurat"
-Use the `--input` parameter to set the path to the seurat file
+#### 4.1) If `--mode=seurat`:
+Use the `--input` parameter to set the path to the seurat file. If you are using this mode, you need to provide a configuration file with the `params-file` parameter that contains information about the grouping/filtering that should be done in the Seurat object for your specific needs. See `example_config.yaml` for instructions and an example on how to write a config file for your dataset.
 
-#### 4.2) Mode is set to "tsv"
+#### 4.2) If `--mode=tsv`:
+Do not set the `input` parameter! <br />
 Use the `--input_file1` parameter to set the path to the first tsv file. <br />
 Use the `--input_file2` parameter to set the path to the second tsv file. <br />
-If you are only using GRN inference tools, specifying one input is enough. <br />
-The first column of the tsv files **has to be named** `Gene` and contain all gene names. The following columns represent the samples. 
+<!-- If you are only using GRN inference tools, specifying one input is enough. <br /> -->
+The first column of the tsv files **has to be named** `Gene` and contain all gene names. The following columns represent the samples. If you are using this mode, you need to set the `--comparison_id` parameter. This needs to be an identifiable string because the folder with results will be named after this. You **do not** need to set the `params-file` parameter!  
 
-### 5) Writing a ${config_file}
+#### 4.3) If `--mode=anndata`:
+Work in progress.
 
-#### 5.1) Mode is set to "seurat"
-The configuration file is a yaml file that contains the configuration for the data that you are using to select the correct cells
-1) Create a config.yaml file
-2) The structure for the config file is explained in the example config "example_config.yaml"
-3) Set the parameter `-params-file` to the path of your config file 
+### 5) Setting the `--publish_dir` parameter:
+This parameter sets the path to the results folder where the results/outputs should be written. This folder must exist!
 
-#### 5.2) Mode is set to "tsv"
-You do not need to write a configuration file. However, you need to set an identifier for the anaylsis with the `--comparison_id` parameter. Set this to something identifiable and unique because the folder with the specifc analysis results will be named after this.
+### 6) Optional Parameters
+1) `--create_metacells`: Default value: TRUE <br />
+   Determines whether metacells should be created or not. If you do not use metacells, the computation runtime of the implemented tools is really long.
+2) `--work`: Default value: Path to folder where you start the the nextflow pipeline. <br />
+   Change this if you want the internal nextflow files to be stored somewhere else. The internal nextflow files can be quite big, so be careful if you have limited disk usage.
+3) `--n_runs`: Default value: 10 <br />
+   Determines how often the tools are run that rely on randomization (boostdiff, grnboost2). This is done to improve the robustness of these tools.
+4) See `nextflow.config` for all tool specific and nextflow specific parameters.  
 
-### 6) Working example of running the pipeline:
-You only need to set the ${path_to_nextflow} specific to your system to run the following command and test the pipeline. (Needs to be run inside the project directory)
-<!-- ```
-${path_to_nextflow}/nextflow run main.nf --tools=boostdiff,grnboost2 --mode=tsv --input_file1=$(pwd)/example_file1.tsv --input_file2=$(pwd)/example_file2.tsv --comparison_id=example_analysis
-``` -->
+## Further Information
+README is WIP: Information to come:
+1) Structure of the pipeline
+2) Instructions/Example on how to extend the pipeline with a tool/analyses
 
-## Structure of the pipeline:
+<!-- ## Structure of the pipeline:
 The pipeline is split into 3 steps:
 1) Data loading
 2) Running tools
@@ -96,7 +102,7 @@ Outputs:
   * networks: Nextflow channel, where all networks are grouped based on the keys
 ### 3) Analysis
   Inputs:
-    * networks: Nextflow channel, where all networks are grouped based on the keys (computed by step 2)
+    * networks: Nextflow channel, where all networks are grouped based on the keys (computed by step 2) -->
 
 <!-- ## How to extend the pipeline
 Suppose you want to extend the pipeline with a new workflow/module for any of the steps of the pipeline. This section goes over the steps needed to accomplish this. For any information on nextflow functions, we refer to the official nextflow documentation: TODO: ADD_URL
