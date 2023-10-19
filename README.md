@@ -68,7 +68,7 @@ This parameter sets the path to the results folder where the results/outputs sho
 ### 6) Optional Parameters
 1) `--create_metacells`: Default value: TRUE <br />
    Determines whether metacells should be created or not. If you do not use metacells, the computation runtime of the implemented tools is really long.
-2) `--work`: Default value: Path to folder where you start the the nextflow pipeline. <br />
+2) `-w`: Default value: Path to folder where you start the the nextflow pipeline. <br />
    Change this if you want the internal nextflow files to be stored somewhere else. The internal nextflow files can be quite big, so be careful if you have limited disk usage.
 3) `--n_runs`: Default value: 10 <br />
    Determines how often the tools are run that rely on randomization (boostdiff, grnboost2). This is done to improve the robustness of these tools.
