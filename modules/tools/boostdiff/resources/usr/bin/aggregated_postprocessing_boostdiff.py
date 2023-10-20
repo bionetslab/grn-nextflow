@@ -162,12 +162,12 @@ def inh_or_act(file_condition, network, alpha=95):
         target_sd = np.std(ge_target)
         regulator_sd = np.std(ge_regulator)
         
-        target_mask = not(ge_target > (target_mean + 2*target_sd) or ge_target < (target_mean - 2*target_sd))
-        regulator_mask = not(ge_regulator > (regulator_mean + 2*regulator_sd) or ge_data < (regulator_mean - 2*regulator_sd))
-        combined_mask = target_mask | regulator_mask
+        target_mask = np.logical_or(ge_target > (target_mean + 2*target_sd), ge_target < (target_mean - 2*target_sd))
+        regulator_mask = np.logical_or(ge_regulator > (regulator_mean + 2*regulator_sd), ge_regulator < (regulator_mean - 2*regulator_sd))
+        combined_mask = np.logical_not(target_mask | regulator_mask)
 
-        ge_regulator = ge_regulator[~combined_mask]
-        ge_target = ge_target[~combined_mask]
+        ge_regulator = ge_regulator[combined_mask]
+        ge_target = ge_target[combined_mask]
         
         slope, intercept = np.polyfit(ge_regulator, ge_target, 1)
         slopes.append(slope)
