@@ -11,4 +11,4 @@ option_list <- list(
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
-sceasy::convertFormat(opt$input.file, from="anndata", to="seurat", outFile='seurat_file.rds')
+sceasy::convertFormat(opt$input.file, from="anndata", to="seurat", outFile='seurat_object.rds')

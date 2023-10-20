@@ -157,8 +157,9 @@ def main(file1, file2, output_folder, n_runs, top_n_edges=100):
     
     # fit linear model on edges to check if edge is activator or inhibitor
     aggregated_filtered_network = inh_or_act(file1, file2, aggregated_filtered_network)
-    
     aggregated_filtered_network["condition"] = "grnboost2"
+    aggregated_filtered_network = aggregated_filtered_network.reindex(columns=["target", "regulator", "weight", "condition", "effect"])
+
     write_output(network=aggregated_filtered_network, output_path=output_folder, filename="aggregated_filtered_network_grnboost.txt")
     
 

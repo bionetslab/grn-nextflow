@@ -93,16 +93,18 @@ for (s in selections) {
 configuration <- unique(configuration)
 
 ########### Loading Seurat object, filtering the correct cells and performing differential testing
-adata <- readRDS(opt$seurat.file)
-# adata <- adata$all
+if (opt$mode != "tsv") {
+  adata <- readRDS(opt$seurat.file)
+  # adata <- adata$all
 
-# Set grouping var to Armstrong vs Docile
-group.var<-strsplit(configuration[1]$group_var, ':')[[1]]
+  # Set grouping var to Armstrong vs Docile
+  group.var<-strsplit(configuration[1]$group_var, ':')[[1]]
 
-Idents(adata)<-group.var
-#### ADD SOME CONVENIENCE VARIABLES
-factor_groups<-names(which(sapply(adata@meta.data, class)=='factor'))
-###########
+  Idents(adata)<-group.var
+  #### ADD SOME CONVENIENCE VARIABLES
+  factor_groups<-names(which(sapply(adata@meta.data, class)=='factor'))
+
+}
 
 ui <- 
   navbarPage(
@@ -220,7 +222,9 @@ ui <-
         ), 
       ),
     ),
-    tabPanel(
+    conditionalPanel(
+      condition = "output.mode != tsv",
+      tabPanel(
       "Gene Expression", 
       h2("Gene Expression"),
         sidebarLayout(
@@ -275,12 +279,13 @@ ui <-
           )
         )
       )
+    )
   )
 
 server <- function(input, output, session) {
   observe_helpers(withMathJax = TRUE)
 #   # The forcenetwork needs to be a reactive value to change the node/link values
-
+  output$mode <- opt$mode
 
   output$comparison_plots <- renderUI({
     if(opt$mode != "seurat"){
@@ -448,12 +453,6 @@ server <- function(input, output, session) {
         # finding the correct network based on input$Key_pick and input$DiffGRN_pick
         network.file <- grep(paste(input$Key_pick, input$GRN_pick, sep="/"), all_network.files, value = TRUE)
         displayed_network$GRN_network_data <- read.table(file = network.file, header = TRUE)
-        ## TODO!: Fix this in the pipeline so that the network matrices all have the same order/name of columns
-        # adjusting column order and name to fit boostdiff column names and order 
-        displayed_network$GRN_network_data["condition"] <- input$GRN_pick
-        displayed_network$GRN_network_data <- displayed_network$GRN_network_data[, c(1,2,3,5,4)]
-        colnames(displayed_network$GRN_network_data)[colnames(displayed_network$GRN_network_data) == "TF"] <- "regulator"
-        ##
         if (!is.null(displayed_network$diffGRN_network_data)) {
           displayed_network$network_data <- rbind(displayed_network$diffGRN_network_data, displayed_network$GRN_network_data)
           displayed_network$network_data[[1]] <-  str_to_title(displayed_network$network_data[[1]])

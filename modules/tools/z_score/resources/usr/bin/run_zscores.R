@@ -14,7 +14,7 @@ option_list <- list(
     make_option(c("-o", "--output.file"), type = 'character',
                 default="result_zscores.tsv", help='output file'),
     make_option(c("-n", "--top_n_edges"), type="integer", 
-                default=100, help="Filter network for top_n_edges"),
+                default=100, help="Filter network for top_n_edges")
 )
 
 opt <- parse_args(OptionParser(option_list=option_list))
@@ -82,4 +82,4 @@ for(row in 1:nrow(edgedf)) {
     edgedf[row,]$effect <- as.numeric(model$coefficients[2])
 }
 
-fwrite(edgedf, opt$output.file, sep="\t")
+fwrite(edgedf, paste0(opt$output.file, "aggregated_filtered_network_zscore.txt"), sep="\t")

@@ -5,7 +5,7 @@ workflow Z_SCORE {
         data
     
     main:
-        z_score = RUN_TOOL(data, params.filtering.top_n_edges)
+        z_score = RUN_TOOL(data, params.z_score.top_n_edges)
     
     emit:
         z_score

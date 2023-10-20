@@ -1,5 +1,5 @@
 process RUN_TOOL {
-  maxForks 4
+  maxForks 5
   publishDir params.publish_dir
 
   input:

@@ -36,7 +36,7 @@ ${path_to_nextflow}/nextflow run main.nf --tools=${tools_to_run} --mode=${data_m
 The `--tools` parameter needs to be set to identify the tools that are used in the pipeline. Current available tools are:
 * DGRN inference tools:
   * `boostdiff` (https://github.com/gihannagalindez/boostdiff_inference)
-  * `z-score` (https://doi.org/10.1371/journal.pone.0009202)
+  * `z_score` (https://doi.org/10.1371/journal.pone.0009202)
   * `diffcoex` (https://doi.org/10.1186/1471-2105-11-497)
 * GRN inference tools:
   * `grnboost2` (https://academic.oup.com/bioinformatics/article/35/12/2159/5184284)
@@ -50,17 +50,17 @@ The `--mode` parameter needs to be set to identify the data that you are using. 
 The full path has to be set for all input files!
 
 #### 4.1) If `--mode=seurat`:
-Use the `--input` parameter to set the path to the seurat file. If you are using this mode, you need to provide a configuration file with the `params-file` parameter that contains information about the grouping/filtering that should be done in the Seurat object for your specific needs. See `example_config.yaml` for instructions and an example on how to write a config file for your dataset.
+Use the `--input` parameter to set the path to the seurat file. **The file type must be .RDS**. If you are using this mode, you need to provide a configuration file with the `-params-file` parameter that contains information about the grouping/filtering that should be done in the Seurat object for your specific needs. See `example_config.yaml` for instructions and an example on how to write a config file for your dataset.
 
 #### 4.2) If `--mode=tsv`:
-Do not set the `input` parameter! <br />
+Do not set the `--input` parameter! <br />
 Use the `--input_file1` parameter to set the path to the first tsv file. <br />
 Use the `--input_file2` parameter to set the path to the second tsv file. <br />
 <!-- If you are only using GRN inference tools, specifying one input is enough. <br /> -->
-The first column of the tsv files **has to be named** `Gene` and contain all gene names. The following columns represent the samples. If you are using this mode, you need to set the `--comparison_id` parameter. This needs to be an identifiable string because the folder with results will be named after this. You **do not** need to set the `params-file` parameter!  
+The first column of the tsv files **has to be named** `Gene` and contain all gene names. The following columns represent the samples. If you are using this mode, you need to set the `--comparison_id` parameter. This needs to be an identifiable string because the folder with results will be named after this. You **do not** need to set the `-params-file` parameter as there cannot be done any grouping/filtering on the tsv files!  
 
 #### 4.3) If `--mode=anndata`:
-Work in progress.
+Set the `--input` paramter to the path to the AnnData object. **The file type must be .h5ad**. The AnnData object will be converted to a Seurat object in the pipeline. If you are using this mode, you need to provide a configuration file with the `-params-file` parameter that contains information about the grouping/filtering that should be done in the AnnData object for your specific needs. See `example_config.yaml` for instructions and an example on how to write a config file for your dataset.
 
 ### 5) Setting the `--publish_dir` parameter:
 This parameter sets the path to the results folder where the results/outputs should be written. This folder must exist!
@@ -68,7 +68,7 @@ This parameter sets the path to the results folder where the results/outputs sho
 ### 6) Optional Parameters
 1) `--create_metacells`: Default value: TRUE <br />
    Determines whether metacells should be created or not. If you do not use metacells, the computation runtime of the implemented tools is really long.
-2) `-w`: Default value: Path to folder where you start the the nextflow pipeline. <br />
+2) `--work`: Default value: Path to folder where you start the the nextflow pipeline. <br />
    Change this if you want the internal nextflow files to be stored somewhere else. The internal nextflow files can be quite big, so be careful if you have limited disk usage.
 3) `--n_runs`: Default value: 10 <br />
    Determines how often the tools are run that rely on randomization (boostdiff, grnboost2). This is done to improve the robustness of these tools.

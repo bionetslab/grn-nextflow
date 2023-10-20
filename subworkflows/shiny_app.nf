@@ -59,12 +59,7 @@ workflow SHINY_APP {
                     }
                   }
                 }
-                // Check if covariate_config keys are the same inside one comparison -> Throw error if it is not the case 
-                if (covariate_config_keys.size() > 1) {
-                  if (!covariate_config_keys[0].equals(covariate_config_keys[1])) {
-                    throw new Exception("The Covariate configuration keys have to be the same inside one comparison!")
-                  }
-                }
+                
                 cov_index = cov_index + 1
               }
 
@@ -120,7 +115,15 @@ workflow SHINY_APP {
         } else {
           diffgrn_tools = diffgrn_tools.join(",")
         }
-        CREATE_SHINY_APP(selection, diffgrn_tools, grn_tools)
+        if (params.mode == "seurat") {
+          seurat_file = params.input
+        } else if (params.mode == "anndata") {
+  	  	  seurat_file = "./seurat_object.rds"
+        } else if (params.mode == "tsv") {
+          seurat_file = "NA"
+        }
+
+        CREATE_SHINY_APP(seurat_file, selection, diffgrn_tools, grn_tools)
         // selection_ids = params.data_loading_seurat.selection_ids_toUse.split(",")
         // selection = []
         // params.data_loading_seurat.selection.eachWithIndex { element, index ->    

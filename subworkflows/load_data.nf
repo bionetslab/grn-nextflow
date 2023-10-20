@@ -21,9 +21,10 @@ workflow LOAD_DATA {
     
 	  // This currently can only handle raw inputs and no filters/aggregation etc. -> not better than a tsv file
 	  // TODO: Figure out how the conversion converts column names and additional information such as UMAP plots ... (need a toy dataset for this)
-      println(params.input)
-	  seurat_file = CONVERT_ANNDATA_TO_SEURAT(params.input)
-      data = SELECT_DATA(params.mode, seurat_file, null)
+		selection = read_config()
+		input_case_ch = Channel.fromList(selection)
+	  	seurat_file = CONVERT_ANNDATA_TO_SEURAT(params.input)
+      	data = SELECT_DATA(params.mode, seurat_file, input_case_ch)
 
     } else {
       throw new Exception('Please select one of the following modes for the provided data: "seurat", "tsv"')
@@ -86,11 +87,11 @@ def read_config() {
 					}
 				}
 				// Check if covariate_config keys are the same inside one comparison -> Throw error if it is not the case 
-				if (covariate_config_keys.size() > 1) {
-				if (!covariate_config_keys[0].equals(covariate_config_keys[1])) {
-					throw new Exception("The Covariate configuration keys have to be the same inside one comparison!")
-				}
-				}
+				// if (covariate_config_keys.size() > 1) {
+				// // if (!covariate_config_keys[0].equals(covariate_config_keys[1])) {
+				// // 	throw new Exception("The Covariate configuration keys have to be the same inside one comparison!")
+				// // }
+				// }
 				cov_index = cov_index + 1
 			}
 	    	// Function of this: Duplicates list for every covariate configuration and enters the proper values for each list

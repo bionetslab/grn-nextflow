@@ -2,7 +2,6 @@ include { BOOSTDIFF } from './tools/boostdiff'
 include { GRNBOOST2 } from './tools/grnboost2'
 include { Z_SCORE } from './tools/z_score'
 include { DIFFCOEX } from './tools/diffcoex'
-include { EBCOEXPRESS } from './tools/ebcoexpress'
 
 workflow RUN_TOOLS {
     take:
@@ -27,12 +26,7 @@ workflow RUN_TOOLS {
                     break
 
                 case "diffcoex":
-                    networks.add(RUN_DIFFCOEX(data, runs))
-                    break
-                
-                // This tool will probably not be supported because of too high runtime
-                case "ebcoexpress":
-                    networks.add(RUN_EBCOEXPRESS(data, runs))
+                    networks.add(DIFFCOEX(data))
                     break
             }
         }

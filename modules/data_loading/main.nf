@@ -11,7 +11,7 @@ process CREATE_METACELLS_SEURAT {
 
   script:
   """
-  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -n 30 -l $cluster_name -k $cluster_ids -a $assay -m $mode
+  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -l $cluster_name -k $cluster_ids -a $assay -m $mode
   """
 }
 
@@ -31,23 +31,8 @@ process CREATE_METACELLS_TSVFILES {
   """  
 }
 
-process CREATE_METACELLS_ANNDATA {
-  label 'big_mem'
-
-  input:
-  path seurat_object 
-  val mode
-
-  output:
-  tuple val (key), path("aggregated_seurat_object.tsv")
-
-  script:
-  """
-  create_metacells.R -f $seurat_object -o "aggregated_seurat_object.tsv" -n 100 -m $mode
-  """
-}
-
 process CONVERT_ANNDATA_TO_SEURAT {
+  publishDir params.publish_dir
   label 'big_mem'
 
   input:

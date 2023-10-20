@@ -39,7 +39,8 @@ data.2<-data.2[Gene %in% gene.names]
 data.1$Gene<-toupper(data.1$Gene)
 data.2$Gene<-toupper(data.2$Gene)
 
-
+data.1 <- data.1[order(Gene)]
+data.2 <- data.2[order(Gene)]
 # dir_path <- paste(opt$output.folder, opt$key, sep="/", collapse=NULL)
 # if (!dir.exists(dir_path)) {
 #   dir.create(dir_path, recursive = TRUE)

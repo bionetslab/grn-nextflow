@@ -2,6 +2,7 @@ process CREATE_SHINY_APP {
   publishDir params.publish_dir
 
   input:
+  val seurat_file
   val selection
   val diffgrn_tools
   val grn_tools
@@ -12,7 +13,7 @@ process CREATE_SHINY_APP {
   script:
   """
   touch "run_shiny.sh"
-  echo "Rscript ${projectDir}/modules/shiny_app/resources/usr/bin/shiny_app.R -r ${params.publish_dir} -p ${projectDir} -s ${selection} -f ${params.input} --dgrntools ${diffgrn_tools} --grntools ${grn_tools} " >> "run_shiny.sh"
+  echo "Rscript ${projectDir}/modules/shiny_app/resources/usr/bin/shiny_app.R -r ${params.publish_dir} -p ${projectDir} -s ${selection} -f ${seurat_file} --dgrntools ${diffgrn_tools} --grntools ${grn_tools} " >> "run_shiny.sh"
   chmod u+x "run_shiny.sh"
   """
 }

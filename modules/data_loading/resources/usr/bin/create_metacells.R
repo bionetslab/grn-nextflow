@@ -36,7 +36,7 @@ option_list <- list(
   make_option(c("-n", "--n.samples"), type="integer", default=100, 
               help="Number of meta cells to generate",
               metavar="number"),
-  make_option(c("-p", "--p.missing"), type="integer", default=50, 
+  make_option(c("-p", "--p.missing"), type="integer", default=10, 
               help="Percentage of 0 allowed per gene",
               metavar="number"),
   make_option(c("-s", "--selection"), type = 'character', default="", 
@@ -69,7 +69,7 @@ opt <- parse_args(OptionParser(option_list=option_list))
 
 n.samples<-opt$n.samples
 
-if (opt$mode == "seurat") {
+if (opt$mode == "seurat" || opt$mode == "anndata") {
 
   print('Selected parameters')
   print(opt$input.file)
@@ -106,12 +106,14 @@ if (opt$mode == "seurat") {
     # first criterion
     select.cells <- which(adata@meta.data[, opt$group.var[1]]==opt$selection[[g]][1])
     # select metadata categories
-    for (i in 2:length(opt$group.var)){
-      select.cells<-intersect(select.cells, which(adata@meta.data[, opt$group.var[i]]==opt$selection[[g]][i]))
+    if (length(opt$group.var) > 1) {
+      for (i in 2:length(opt$group.var)){
+        select.cells<-intersect(select.cells, which(adata@meta.data[, opt$group.var[i]]==opt$selection[[g]][i]))
+      }
     }
 
     # select clusters (multiple)
-    if (!is.null(opt$cluster.name) && !is.null(opt$cluster.ids)) {
+    if (!is.null(opt$cluster.name) & !is.null(opt$cluster.ids)) {
       select.cells<-intersect(select.cells, which(adata@meta.data[, opt$cluster.name] %in% as.numeric(opt$cluster.ids)))
     }
 
@@ -146,7 +148,6 @@ if (opt$mode == "seurat") {
   meta.cell.df<-meta.cell.df[select, ]
   # save the aggregated data frame into a tsv sheet
   fwrite(meta.cell.df, file = file.path(opt$output.file), sep='\t')
-
 } else if (opt$mode == "tsv") {
 
   expression_matrix <- read.table(opt$input.file, header = TRUE, row.names = 1, sep = "\t")
@@ -177,31 +178,4 @@ if (opt$mode == "seurat") {
   # save the aggregated data frame into a tsv sheet
   fwrite(result.data.frame, file = file.path(opt$output.file), sep='\t')
 
-} else if (opt$mode == "anndata") {
-  adata <- readRDS(opt$input.file)
-  
-  # Find number of barcodes in object
-  n.cells <- nrow(adata@meta.data)
-  # Compute number of cells to aggregate
-  cells.p.metasample <- n.cells/n.samples
-  # randomly assign each of the cells to a group
-  set.seed(1)
-  adata@meta.data$meta.cell <- sample(nrow(adata@meta.data), size = nrow(adata@meta.data), replace = FALSE) %% n.samples
-  # Set the ident to the newly created meta.cell variable
-  Idents(adata) <- "meta.cell"
-  # Aggregate the expression
-  gexpr <- adata@assays[["RNA"]]@data
-  select<-which(rowSums(gexpr==0)/(ncol(gexpr)-1)<(opt$p.missing/100))
-  subset <- adata[select, ]
-  agg<-AggregateExpression(subset, return.seurat = T)
-  # export the results
-  result.data.frame<-agg@assays[["RNA"]]@data
-  row.names<-rownames(result.data.frame)
-  column.names<-paste("metaCell", 1:n.samples, sep="")
-  result.data.frame<-as.data.table(result.data.frame)
-  result.data.frame<-cbind(row.names, result.data.frame)
-  colnames(result.data.frame)<-c('Gene', column.names)
-  # result.data.frame<-result.data.frame[select, ]
-  # save the aggregated data frame into a tsv sheet
-  fwrite(result.data.frame, file = file.path(opt$output.file), sep='\t') 
-}
+} 
