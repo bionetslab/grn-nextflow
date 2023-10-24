@@ -31,6 +31,7 @@ data.2 <- read.table(file = opt$input.file.2, sep = "\t", header = TRUE)
 conditions <- c(rep(1, times=ncol(data.1)-1), rep(2, times=ncol(data.2)-1)) # -1 because of GENE column that has to be ignored
 # merging data
 data <- cbind(data.1, data.2[, 2:ncol(data.2)])
+
 rownames(data) <- data[, 1]
 data <- data[, 2:ncol(data)]
 names(conditions) <- (colnames(data))
@@ -45,7 +46,9 @@ edgedf <- as_data_frame(dcnet, what = 'edges')
 edgedf$abs_score <- abs(edgedf$score)
 edgedf$condition <- ifelse(edgedf$score >= 0, cond_name_1, cond_name_2)
 edgedf <- setorder(edgedf, -abs_score)
-edgedf <- edgedf[1:opt$top_n_edges,]
+if (opt$top_n_edges < nrow(edgedf)) {
+    edgedf <- edgedf[1:opt$top_n_edges,]
+}
 
 edgedf <- edgedf[, !(names(edgedf) %in% c("abs_score", "color"))]
 colnames(edgedf) <- c("target", "regulator", "weight", "condition")
@@ -55,7 +58,7 @@ for(row in 1:nrow(edgedf)) {
     target <- edgedf[row, 1]
     regulator <- edgedf[row, 2]
     condition <- edgedf[row, 4]
-
+    print(edgedf[row,])
     if (condition == cond_name_1) {
         target_data <- as.numeric(data.1[data.1$Gene == target,2:ncol(data.1)]) 
         regulator_data <- as.numeric(data.1[data.1$Gene == regulator,2:ncol(data.1)])        
@@ -82,4 +85,4 @@ for(row in 1:nrow(edgedf)) {
     edgedf[row,]$effect <- as.numeric(model$coefficients[2])
 }
 
-fwrite(edgedf, paste0(opt$output.file, "aggregated_filtered_network_zscore.txt"), sep="\t")
+fwrite(edgedf, paste0(opt$output.file, "aggregated_filtered_network_zscores.txt"), sep="\t")

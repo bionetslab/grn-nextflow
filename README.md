@@ -36,7 +36,7 @@ ${path_to_nextflow}/nextflow run main.nf --tools=${tools_to_run} --mode=${data_m
 The `--tools` parameter needs to be set to identify the tools that are used in the pipeline. Current available tools are:
 * DGRN inference tools:
   * `boostdiff` (https://github.com/gihannagalindez/boostdiff_inference)
-  * `z_score` (https://doi.org/10.1371/journal.pone.0009202)
+  * `zscores` (https://doi.org/10.1371/journal.pone.0009202)
   * `diffcoex` (https://doi.org/10.1186/1471-2105-11-497)
 * GRN inference tools:
   * `grnboost2` (https://academic.oup.com/bioinformatics/article/35/12/2159/5184284)
@@ -47,7 +47,7 @@ The `--tools` parameter needs to be set as comma separated list. For example, if
 The `--mode` parameter needs to be set to identify the data that you are using. Currently availabe modes are `seurat`, `tsv` and `anndata`. 
 
 ### 4) Setting `--input` parameter:
-The full path has to be set for all input files!
+The full path has to be set for all input files! TODO: (remove this in the pipeline) ALL values in columns must not be ",", "-", ":", atm.  
 
 #### 4.1) If `--mode=seurat`:
 Use the `--input` parameter to set the path to the seurat file. **The file type must be .RDS**. If you are using this mode, you need to provide a configuration file with the `-params-file` parameter that contains information about the grouping/filtering that should be done in the Seurat object for your specific needs. See `example_config.yaml` for instructions and an example on how to write a config file for your dataset.

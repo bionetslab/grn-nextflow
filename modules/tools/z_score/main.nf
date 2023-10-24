@@ -6,7 +6,7 @@ process RUN_TOOL {
   val top_n_edges
 
   output:
-  tuple val (key), path ("${key}/zscores/aggregated_filtered_network_zscore.txt")
+  tuple val (key), path ("${key}/zscores/aggregated_filtered_network_zscores.txt")
 
   script:
   """

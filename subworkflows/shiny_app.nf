@@ -123,7 +123,7 @@ workflow SHINY_APP {
           seurat_file = "NA"
         }
 
-        CREATE_SHINY_APP(seurat_file, selection, diffgrn_tools, grn_tools)
+        CREATE_SHINY_APP(seurat_file, selection, diffgrn_tools, grn_tools, params.mode)
         // selection_ids = params.data_loading_seurat.selection_ids_toUse.split(",")
         // selection = []
         // params.data_loading_seurat.selection.eachWithIndex { element, index ->    

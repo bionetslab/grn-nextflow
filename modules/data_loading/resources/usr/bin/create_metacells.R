@@ -53,7 +53,9 @@ option_list <- list(
   make_option(c("-a", "--assay"), type = 'character', default="",
               help="Assay used"),
   make_option(c("-m", "--mode"), type = 'character',
-              help="data loading mode. Available modes: 'tsv', 'seurat'", default="seurat"))
+              help="data loading mode. Available modes: 'tsv', 'seurat'", default="seurat"),
+  make_option(c("--key"), type = 'character',
+              help="Key that specifies the selection"))
 
 # get command line options, if help option encountered print help and exit,
 # otherwise if options not found on command line then set defaults, 
@@ -79,7 +81,6 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   print(opt$output.file)
   print(opt$assay)
   print(opt$cluster.name)
-
   if (opt$cluster.name == "null" || opt$cluster.ids == "null") {
     opt$cluster.name <- NULL
     opt$cluster.ids <- NULL
@@ -96,10 +97,12 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   # adata<-adata$all
 
 
+
   # Set the ident to the required identity class
   Idents(adata)<- opt$group.var
   meta.cell.df<-NULL
   # For each group:
+  select.cells.all <- c()
   for (g in 1:length(opt$selection)){
     # Create a subset of the required data
     select.cells<-list()
@@ -116,33 +119,34 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
     if (!is.null(opt$cluster.name) & !is.null(opt$cluster.ids)) {
       select.cells<-intersect(select.cells, which(adata@meta.data[, opt$cluster.name] %in% as.numeric(opt$cluster.ids)))
     }
+    # print(select.cells)
+    select.cells.all <- c(select.cells.all, unlist(select.cells))
+  }  
+  subset<-subset(adata, cells = select.cells.all)
+  # Find number of barcodes in object
+  n.cells<-nrow(subset@meta.data)
+  # Compute number of cells to aggregate
+  cells.p.metasample<-nrow(subset@meta.data)/n.samples
+  # randomly assign each of the cells to a group
+  set.seed(1)
+  subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
+  # Set the ident to the newly created meta.cell variable
+  Idents(subset)<-"meta.cell"
+  # Aggregate the expression
+  agg<-AggregateExpression(subset, slot = "data", return.seurat = T, assays = opt$assay)
 
-    subset<-subset(adata, cells = select.cells)
-    # Find number of barcodes in object
-    n.cells<-nrow(subset@meta.data)
-    # Compute number of cells to aggregate
-    cells.p.metasample<-nrow(subset@meta.data)/n.samples
-    # randomly assign each of the cells to a group
-    set.seed(1)
-    subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
-    # Set the ident to the newly created meta.cell variable
-    Idents(subset)<-"meta.cell"
-    # Aggregate the expression
-    agg<-AggregateExpression(subset, slot = "data", return.seurat = T, assays = opt$assay)
-
-    # export the results
-    result.data.frame<-agg@assays[[opt$assay]]@data
-    row.names<-rownames(result.data.frame)
-    column.names<-paste0(paste0(opt$selection[[g]], collapse='_'), '_', colnames(result.data.frame))
-    result.data.frame<-as.data.table(result.data.frame)
-    result.data.frame<-cbind(row.names, result.data.frame)
-    colnames(result.data.frame)<-c('Gene', column.names)
-    if(is.null(meta.cell.df)){
-      meta.cell.df<-result.data.frame
-    }
-    else{
-      meta.cell.df<-merge(meta.cell.df, result.data.frame, by = 'Gene')
-    }
+  # export the results
+  result.data.frame<-agg@assays[[opt$assay]]@data
+  row.names<-rownames(result.data.frame)
+  column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
+  result.data.frame<-as.data.table(result.data.frame)
+  result.data.frame<-cbind(row.names, result.data.frame)
+  colnames(result.data.frame)<-c('Gene', column.names)
+  if(is.null(meta.cell.df)){
+    meta.cell.df<-result.data.frame
+  }
+  else{
+    meta.cell.df<-merge(meta.cell.df, result.data.frame, by = 'Gene')
   }
   select<-which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(opt$p.missing/100))
   meta.cell.df<-meta.cell.df[select, ]

@@ -21,7 +21,7 @@ workflow RUN_TOOLS {
                     networks.add(GRNBOOST2(data, runs))
                     break
 
-                case "z_score":
+                case "zscores":
                     networks.add(Z_SCORE(data))
                     break
 
