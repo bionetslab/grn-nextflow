@@ -15,6 +15,7 @@
 # library(networkD3)
 library(htmlwidgets)
 library(optparse)
+library(data.table)
 
 ################################################################################
 
@@ -34,91 +35,101 @@ library(networkD3, lib.loc=sprintf("%s/lib", opt$project.folder))
 
 colors <- c("#cc79a7", "#009e73", "#0072b2")
 
-data <- read.table(file = opt$input.file, sep = "\t", header = TRUE)
-links <- data.frame(source = data[, 2], target = data[, 1], width=1, stringsAsFactors=F)
-nodes <- data.frame(name = unique(c(unique(links$source), unique(links$target))), group = 1)
-nodes$id = seq(0, nrow(nodes)-1)
-
-# replacing node names with numeric values in links for plotting function
-i <- 0
-for(node in nodes$name) {
-    links$source[links$source == node] = i
-    links$target[links$target == node] = i
-    i <- i + 1
-}
-
-network <- list(links = links, nodes = nodes)
-
-conditions <- unique(data$condition)
-data$condition <- ifelse(data$condition == conditions[1], colors[1], data$condition)
-
-if (length(conditions) > 1) {
-  legend <- htmltools::div(style = "padding: 10px; background-color: white;",
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    sprintf("Stronger in %s (Activator)", conditions[1]),
-    htmltools::br(),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    sprintf("Stronger in %s (Repressor)", conditions[1]),
-    htmltools::br(),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-    sprintf("Stronger in %s (Activator)", conditions[2]),
-    htmltools::br(),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
-    sprintf("Stronger in %s (Repressor)", conditions[2])
-  )
-  data$condition <- ifelse(data$condition == conditions[2], colors[2], data$condition)
+tmp <- try(read.table(file = opt$input.file, header = TRUE, sep = '\t'), silent=TRUE)
+if (class(tmp) == 'try-error') {
+  dir.create(opt$output.folder)
+  writeLines(
+    paste("<html>\n<head>\n</head>\n<body>\n<h1>",
+          "No edges wer found using this approach",
+          "</h1>\n</body>\n</html>")
+    , opt$output.file)
 } else {
-  legend <- htmltools::div(
-    style = "padding: 10px; background-color: white;",
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    "Activator",
-    htmltools::br(),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
-    "Repressor",
-    htmltools::br())
-}
-# create network
-fn <- forceNetwork(Links = network$links, Nodes = network$nodes, 
-             Source = 'source', Target = 'target', 
-             NodeID = 'name', Group = 'group', Value="width", opacity = 1, arrows=TRUE, 
-             linkColour=data$condition, opacityNoHover = 0.6, zoom=TRUE, colourScale = JS('d3.scaleOrdinal().domain(["1"]).range(["#000000"])'))
 
-# MyClickScript <- 'alert("You clicked " + d.name + " which is in row " +
-#        (d.index + 1) +  " of your original R data frame");'
+  data <- read.table(file = opt$input.file, sep = "\t", header=TRUE)
+  links <- data.frame(source = data[, 2], target = data[, 1], width=1, stringsAsFactors=F)
+  nodes <- data.frame(name = unique(c(unique(links$source), unique(links$target))), group = 1)
+  nodes$id = seq(0, nrow(nodes)-1)
 
-fn$x$links$effect <- data[,5]
-fn <- prependContent(fn, legend)
-
-# add information about inhibition and activation on edges
-fnrender <- onRender(
-  fn,
-  '
-  function(el, x) {
-    d3.selectAll(".link").style("stroke-dasharray", function(d) { 
-      // Effect for repressor or inhibitor    
-      if (d.effect <= 0){
-        return "4px";
-      } else {
-        return;
-      }
-    });
-
+  # replacing node names with numeric values in links for plotting function
+  i <- 0
+  for(node in nodes$name) {
+      links$source[links$source == node] = i
+      links$target[links$target == node] = i
+      i <- i + 1
   }
-  '
-)
 
-dir.create(opt$output.folder)
-saveNetwork(fnrender, opt$output.file)  
+  network <- list(links = links, nodes = nodes)
 
+  conditions <- unique(data$condition)
+  data$condition <- ifelse(data$condition == conditions[1], colors[1], data$condition)
+
+  if (length(conditions) > 1) {
+    legend <- htmltools::div(style = "padding: 10px; background-color: white;",
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      sprintf("Stronger in %s (Activator)", conditions[1]),
+      htmltools::br(),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      sprintf("Stronger in %s (Repressor)", conditions[1]),
+      htmltools::br(),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+      sprintf("Stronger in %s (Activator)", conditions[2]),
+      htmltools::br(),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[2])),
+      sprintf("Stronger in %s (Repressor)", conditions[2])
+    )
+    data$condition <- ifelse(data$condition == conditions[2], colors[2], data$condition)
+  } else {
+    legend <- htmltools::div(
+      style = "padding: 10px; background-color: white;",
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      "Activator",
+      htmltools::br(),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[1])),
+      "Repressor",
+      htmltools::br())
+  }
+  # create network
+  fn <- forceNetwork(Links = network$links, Nodes = network$nodes, 
+               Source = 'source', Target = 'target', 
+               NodeID = 'name', Group = 'group', Value="width", opacity = 1, arrows=TRUE, 
+               linkColour=data$condition, opacityNoHover = 0.6, zoom=TRUE, colourScale = JS('d3.scaleOrdinal().domain(["1"]).range(["#000000"])'))
+
+  # MyClickScript <- 'alert("You clicked " + d.name + " which is in row " +
+  #        (d.index + 1) +  " of your original R data frame");'
+
+  fn$x$links$effect <- data[,5]
+  fn <- prependContent(fn, legend)
+
+  # add information about inhibition and activation on edges
+  fnrender <- onRender(
+    fn,
+    '
+    function(el, x) {
+      d3.selectAll(".link").style("stroke-dasharray", function(d) { 
+        // Effect for repressor or inhibitor    
+        if (d.effect <= 0){
+          return "4px";
+        } else {
+          return;
+        }
+      });
+
+    }
+    '
+  )
+
+  dir.create(opt$output.folder)
+  saveNetwork(fnrender, opt$output.file)  
+}  
 
 
 

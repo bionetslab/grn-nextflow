@@ -64,7 +64,6 @@ for (s in selections) {
   conditions[[key]] <- c(conditions[[key]], condition_name)
   all_group_vars <-c(all_group_vars, strsplit(split_string[3], ":")[[1]])
 }
-print(all_group_vars)
 
 for (s in selections) {
   split_string <- strsplit(s, ",")[[1]]
@@ -72,9 +71,7 @@ for (s in selections) {
   assay <- split_string[2]
   group_var <- split_string[3]
   split_group_var <- strsplit(group_var, ":")[[1]]
-  print(split_group_var)
   group_var_idx <- paste(match(split_group_var, all_group_vars), collapse=":")
-  print(group_var_idx)
 
   filter <- NULL
   filter_val <- NULL
@@ -113,20 +110,14 @@ if (nrow(duplicates) > 0) {
     configuration[(i*2) - 1, ]$group_var <- paste(orig_row$group_var, dup_row$group_var, sep=":")
   }
   # removing duplicate rows has to be done after merging the group_vars
-  for (i in 1:nrow(duplicates)) {
-    configuration <- configuration[-(i*2),]
-  }
+  configuration <- configuration[-sapply(1:nrow(duplicates), function(x) {x * 2}),]
 }
 
-
-# print(duplicates)
-print(configuration)
 ########### Loading Seurat object, filtering the correct cells and performing differential testing
 if (opt$mode != "tsv") {
   adata <- readRDS(opt$seurat.file)
   # adata <- adata$all
-  # Set grouping var to Armstrong vs Docile
-  group.var<-strsplit(configuration[1]$group_var, ':')[[1]]
+  group.var<-unique(strsplit(configuration[1]$group_var, ':')[[1]])
   print(group.var)
   Idents(adata)<-group.var
   # #### ADD SOME CONVENIENCE VARIABLES
@@ -357,7 +348,11 @@ server <- function(input, output, session) {
     )
   })
 
-  displayed_network <- reactiveValues(display_condition = NULL, data_cond1 = NULL, data_cond2 = NULL, diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, fn = NULL, conditions = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = adata)
+  displayed_network <- reactiveValues(
+    diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
+    fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = adata, 
+    cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_minVal = 0, metacells_maxVal = 0
+  )
 
   create_network <- function() {
     links <- data.frame(source = displayed_network$network_data[, 2], target = displayed_network$network_data[, 1], width=displayed_network$network_data[, 3]*100, stringsAsFactors=F)
@@ -439,7 +434,6 @@ server <- function(input, output, session) {
     } else { # TODO: Fix grn only mode
       displayed_network$GRN_network_data <- displayed_network$network_data
     }
-    displayed_network$conditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
     output$condition1_activator <- renderText({
       paste("Stronger in ", gsub(displayed_network$diffConditions[1], pattern="_", replacement=" "), " (Activator)")
     })
@@ -459,10 +453,10 @@ server <- function(input, output, session) {
       } else {
         selectizeInput(
           "selection_dropdown",
-          label = "Choose 2 conditions to compare to.",
-          choices = unique(configuration$condition_name), ## Hardcoded change?
+          label = "Choose a key to compare to.",
+          choices = configuration$key, 
           multiple = TRUE,
-          options = list(maxItems = 2)
+          options = list(maxItems = 1)
         )
       }
     })
@@ -485,6 +479,29 @@ server <- function(input, output, session) {
 
     updateTextInput(session, "DiffGRN_pick", value=opt$dgrntools[1])
     updateTextInput(session, "GRN_pick", value=opt$grntools[1])
+
+    gexp_path <- paste(opt$results.path, input$Key_pick, sep="/")
+    all_files <- list.files(gexp_path)
+    out_files <- sort(grep("^out", all_files, value = TRUE), decreasing = FALSE)
+    displayed_network$cond1_metacells_data <- read.table(file = paste(gexp_path, out_files[1], sep="/"), header = TRUE, sep = "\t")
+    displayed_network$cond2_metacells_data <- read.table(file = paste(gexp_path, out_files[2], sep="/"), header = TRUE, sep = "\t")
+    displayed_network$metacells_minVal <- floor(
+      min(
+        c(
+          min(displayed_network$cond1_metacells_data[,2:ncol(displayed_network$cond1_metacells_data)]), 
+          min(displayed_network$cond2_metacells_data[,2:ncol(displayed_network$cond2_metacells_data)])
+        )
+      )
+    )  
+    displayed_network$metacells_maxVal <- ceiling(
+      max(
+        c(
+          max(displayed_network$cond1_metacells_data[,2:ncol(displayed_network$cond1_metacells_data)]), 
+          max(displayed_network$cond2_metacells_data[,2:ncol(displayed_network$cond2_metacells_data)])
+        )
+      )
+    )
+
     create_network()
   })
   
@@ -494,7 +511,6 @@ server <- function(input, output, session) {
       # finding the correct network based on input$Key_pick and input$DiffGRN_pick
       network.file <- grep(paste(input$Key_pick, input$DiffGRN_pick, sep="/"), all_network.files, value = TRUE)
       displayed_network$diffGRN_network_data <- read.table(file = network.file, header = TRUE)
-      displayed_network$conditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
       displayed_network$diffConditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
       group_var.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var, ":")[[1]]
       group_vals.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_vals, "-")[[1]]
@@ -662,7 +678,7 @@ server <- function(input, output, session) {
             legend.text = element_text(size = 12),
             legend.title = element_text(size = 14),
             plot.title = element_text(size = 15)) +
-      scale_x_continuous(limits = c(0, 5.5)) + scale_y_continuous(limits = c(0, 5.5))
+      scale_x_continuous(limits = c(displayed_network$metacells_minVal, displayed_network$metacells_maxVal)) + scale_y_continuous(limits = c(displayed_network$metacells_minVal, displayed_network$metacells_maxVal))
     return(plot)
   }
   
@@ -684,26 +700,23 @@ server <- function(input, output, session) {
     condition_names<-sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
     # print(condition_names)
     # print(adata$group)
-    plot<-VlnPlot(asub, features = toupper(isolate(input$id_node)), idents = condition_names, cols = colors, y.max=4)
+    plot <- try(VlnPlot(asub, features = toupper(isolate(input$id_node)), idents = condition_names, cols = colors, y.max=4), silent=TRUE)
+    if (class(plot) == "try-error") {
+      plot <- VlnPlot(asub, features = str_to_title(isolate(input$id_node)), idents = condition_names, cols = colors, y.max=4)
+    }
     output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
   })
 
   output$linear_model_plot <- renderPlot({    
     if (is.null(input$id_source)) {
-      print("Select an edge!")
       return(NULL)
     }
 
-    gexp_path <- paste(opt$results.path, input$Key_pick, sep="/")
-    all_files <- list.files(gexp_path)
-    out_files <- sort(grep("^out", all_files, value = TRUE), decreasing = FALSE)
-    gexp_condition1 <- read.table(file = paste(gexp_path, out_files[1], sep="/"), header = TRUE, sep = "\t")
-    gexp_condition2 <- read.table(file = paste(gexp_path, out_files[2], sep="/"), header = TRUE, sep = "\t")
-    expr1_x <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_source, -1])    
-    expr1_y <- as.numeric(gexp_condition1[gexp_condition1$Gene == input$id_target, -1])    
-    expr2_x <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_source, -1])    
-    expr2_y <- as.numeric(gexp_condition2[gexp_condition2$Gene == input$id_target, -1])
+    expr1_x <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == input$id_source, -1])    
+    expr1_y <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == input$id_target, -1])    
+    expr2_x <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_source, -1])    
+    expr2_y <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_target, -1])
     x <- c(expr1_x, expr2_x)
     y <- c(expr1_y, expr2_y)
     condition_name1 <- displayed_network$diffConditions[1]
@@ -732,15 +745,17 @@ server <- function(input, output, session) {
     ) { # only plot if all three values are set and atleast 2 cases are selected
       return(NULL)
     }
+    input$compare_button
     
     filter_name <- configuration[configuration$key == input$Key_pick,]$filter
     filter_val <- input$clusters_pick
 
-    Idents(adata) <- 'group' # TODO this is hardcoded potentially problematic
-    asub <- adata[, adata@meta.data[[filter_name]] %in% filter_val]
-    condition_names<-sapply(isolate(input$selection_dropdown), function(x) gsub(pattern = '_', replacement = ' ', x))
-    condition_names <- sort(condition_names, decreasing=FALSE)
-    plot <- VlnPlot(asub, features = str_to_title(isolate(input$id_node)), idents = condition_names, cols = colors, y.max=4)
+    asub <- displayed_network$adata[, displayed_network$adata@meta.data[[filter_name]] %in% filter_val]
+    condition_names<-sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
+    plot <- try(VlnPlot(asub, features = toupper(isolate(input$id_node)), idents = condition_names, cols = colors, y.max=4), silent=TRUE)
+    if (class(plot) == "try-error") {
+      plot <- VlnPlot(asub, features = str_to_title(isolate(input$id_node)), idents = condition_names, cols = colors, y.max=4)
+    }
     output$downloadComparisonViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
   })
@@ -755,7 +770,6 @@ server <- function(input, output, session) {
         is.null(input$clusters_pick) ||
         length(input$selection_dropdown) < 2 
     ) { # only plot if all three values are set
-      print("Select an edge, two cases in the selection dropdown menu and atleast one cluster!")
       return(NULL)
     }
     input$compare_button
