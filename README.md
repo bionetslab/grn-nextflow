@@ -47,7 +47,7 @@ The `--tools` parameter needs to be set as comma separated list. For example, if
 The `--mode` parameter needs to be set to identify the data that you are using. Currently availabe modes are `seurat`, `tsv` and `anndata`. 
 
 ### 4) Setting `--input` parameter:
-The full path has to be set for all input files! TODO: (remove this in the pipeline) ALL values in columns must not be ",", "-", ":", atm.  
+The full path has to be set for all input files! ALL values in the columns that are used for selection in the configuration file must not contain ",", "-", ":".  
 
 #### 4.1) If `--mode=seurat`:
 Use the `--input` parameter to set the path to the seurat file. **The file type must be .RDS**. If you are using this mode, you need to provide a configuration file with the `-params-file` parameter that contains information about the grouping/filtering that should be done in the Seurat object for your specific needs. See `example_config.yaml` for instructions and an example on how to write a config file for your dataset.
