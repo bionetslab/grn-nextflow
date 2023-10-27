@@ -82,6 +82,7 @@ if (nrow(edgedf) > 0) {
 
         regulator_data <- regulator_data[mask]
         target_data <- target_data[mask]  
+        
         model <- lm(formula = regulator_data ~ target_data)
         edgedf[row,]$effect <- as.numeric(model$coefficients[2])
     }

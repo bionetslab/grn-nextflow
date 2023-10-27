@@ -1,0 +1,5 @@
+.nextflow.log*
+.nextflow/
+.vscode/
+environment/
+boostdiff_inference/
