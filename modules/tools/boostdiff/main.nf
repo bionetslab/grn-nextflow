@@ -5,6 +5,7 @@ process RUN_TOOL {
   input:
   tuple val (key), path (case_file), path (control_file)
   tuple val (n_estimators), val (n_features), val (n_subsamples), val (n_processes) 
+  val (use_tf_list)
   each run
   
   output:
@@ -19,7 +20,7 @@ process RUN_TOOL {
   touch "${key}/boostdiff/run_${run}/case_control.txt"
   echo "$case_file\t${key}/boostdiff/run_${run}/disease" >> "${key}/boostdiff/run_${run}/case_control.txt"
   echo "$control_file\t${key}/boostdiff/run_${run}/control" >> "${key}/boostdiff/run_${run}/case_control.txt"
-  run_boostdiff.py -c $case_file -d $control_file -o ${key}/boostdiff/run_${run} -n $n_features -e $n_estimators -p $n_processes -s $n_subsamples
+  run_boostdiff.py -c $case_file -d $control_file -o ${key}/boostdiff/run_${run} -n $n_features -e $n_estimators -p $n_processes -s $n_subsamples -u $use_tf_list -w ${workflow.projectDir}
   """
 }
 

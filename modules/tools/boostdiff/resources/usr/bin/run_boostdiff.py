@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Usage: run_boostdiff.py -c FILE -d FILE -o FOLDER [-n FEATURES] [-e NUM_ESTIMATORS] [-p PROCESSES] [-s SUBSAMPLES]
+"""Usage: run_boostdiff.py -c FILE -d FILE -o FOLDER [-n FEATURES] [-e NUM_ESTIMATORS] [-p PROCESSES] [-s SUBSAMPLES] [-u USE_TF_LIST] [-w PROJECT_DIRECTORY]
 
 Wrapper script taking as input the case and control files.
 
@@ -11,6 +11,8 @@ Wrapper script taking as input the case and control files.
 -e --n_estimators NUM_ESTIMATORS    specify the number of estimators to use [default: 50]
 -p --n_processes PROCESSES  number of threads [default: 1]
 -s --n_subsamples SUBSAMPLES    number o. of samples in disease and control datasets used to fit a differential tree [default: 15]
+-u --use_tf_list USE_TF_LIST Use transcription factor list?  True or False.  [default: True]
+-w --project_directory PROJECT_DIRECTORY path to the nextflow directory
 --verbose    print more text
 
 """
@@ -24,14 +26,18 @@ import sys
 
 
 def run_boostdiff(file_control, file_case, output_folder, n_estimators, n_features,
-                  n_subsamples, n_processes):
+                  n_subsamples, n_processes, use_tf_list, project_dir):
 
 
     keyword = "test"
+    if (use_tf_list):
+        tfList = pd.read_csv(project_dir + "/tfList_human.tsv", sep="\t", header = None).iloc[:, 0].values.tolist()
+    else:
+        tfList = "all"
 
     model = BoostDiff()
     model.run(file_case, file_control, output_folder, n_estimators, \
-            n_features, n_subsamples=n_subsamples, keyword=keyword, n_processes=n_processes)
+            n_features, n_subsamples=n_subsamples, keyword=keyword, n_processes=n_processes, regulators = tfList)
 
 def cast_arguments(argument_dict):
     int_args = ['--n_estimators','--n_features', '--n_subsamples','--n_processes']
@@ -54,6 +60,8 @@ if __name__ == '__main__':
                   n_features = arguments['--n_features'],
                   n_subsamples= arguments['--n_subsamples'],
                   n_processes = arguments['--n_processes'],
+                  use_tf_list = arguments['--use_tf_list'],
+                  project_dir = arguments['--project_directory']
                   )
 
 

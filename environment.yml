@@ -5,7 +5,7 @@ channels:
   - defaults
   - r
 dependencies:
-  - python=3.7
+  - python=3.8
   - r
   - r-essentials
   - r-seurat
@@ -30,5 +30,6 @@ dependencies:
   - arboreto
   - importlib-metadata
   - bioconductor-dcanr
-  - bioconductor-ebcoexpress
-  - r-sceasy
+  - bioconductor-decoupler
+  - bioconductor-dorothea
+  - bioconductor-omnipathr

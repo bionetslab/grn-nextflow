@@ -72,8 +72,10 @@ This parameter sets the path to the results folder where the results/outputs sho
    Change this if you want the internal nextflow files to be stored somewhere else. The internal nextflow files can be quite big, so be careful if you have limited disk usage.
 3) `--n_runs`: Default value: 10 <br />
    Determines how often the tools are run that rely on randomization (boostdiff, grnboost2). This is done to improve the robustness of these tools.
-4) See `nextflow.config` for all tool specific and nextflow specific parameters.  
-
+4) See `nextflow.config` for all tool specific and nextflow specific parameters.
+5) `--use_tf_list`: Default value: false  
+  Determines if boostdiff should use a transcription factor (tf) list to only infer edges that can be from a gene in this list to any other gene. This reduces the computation time. **This only works if the underlying organism is human.**
+  If this parameter is set to false, all genes will be compared to all genes. WIP: Bugfix/extend to other organisms 
 ## Further Information
 README is WIP: Information to come:
 1) Structure of the pipeline

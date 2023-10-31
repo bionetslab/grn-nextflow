@@ -133,10 +133,13 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   # Set the ident to the newly created meta.cell variable
   Idents(subset)<-"meta.cell"
   # Aggregate the expression
-  agg<-AggregateExpression(subset, slot = "data", return.seurat = T, assays = opt$assay)
-
+  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
   # export the results
-  result.data.frame<-agg@assays[[opt$assay]]@data
+  agg@assays[[opt$assay]]@counts <-agg@assays[[opt$assay]]@counts / cells.p.metasample
+
+  agg <- NormalizeData(object = agg, assay = opt$assay)
+  
+  result.data.frame <- agg@assays[[opt$assay]]@data
   row.names<-rownames(result.data.frame)
   column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
   result.data.frame<-as.data.table(result.data.frame)
@@ -167,12 +170,18 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   # Set the ident to the newly created meta.cell variable
   Idents(subset) <- "meta.cell"
   # Aggregate the expression
+  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = "RNA")
+  # export the results
+  agg@assays[["RNA"]]@counts <-agg@assays[["RNA"]]@counts / cells.p.metasample
+
+  agg <- NormalizeData(object = agg, assay = opt$assay)
   gexpr <- subset@assays[["RNA"]]@data
   select<-which(rowSums(gexpr==0)/(ncol(gexpr)-1)<(opt$p.missing/100))
   subset <- subset[select, ]
-  agg<-AggregateExpression(subset, return.seurat = T)
+  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T)
   # export the results
-  result.data.frame<-agg@assays[["RNA"]]@data
+  result.data.frame<-agg@assays[[opt$assay]]@counts / cells.p.metasample
+
   row.names<-rownames(result.data.frame)
   column.names<-paste("metaCell", 1:n.samples, sep="")
   result.data.frame<-as.data.table(result.data.frame)

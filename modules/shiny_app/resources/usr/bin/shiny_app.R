@@ -42,19 +42,26 @@ option_list <- list(
   make_option(c("-n", "--n.samples"), type="integer",
               default=100, help="Number of meta cells used in the pipeline (Needed for comparison plot)")
 )
-
+# changing opt$grntoools and opt$dgrntools to be suitable as input for the Shiny app
 opt <- parse_args(OptionParser(option_list=option_list))
 if (opt$grntools != "No tools were chosen for GRN Inference") {
   opt$grntools <- c("NA", opt$grntools)
 }
 opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
+
+# loading the modified network3d lib
 library(networkD3, lib.loc=sprintf("%s/lib", opt$project.path))
+
+# colors for the conditions
 colors <- c("#cc79a7", "#009e73", "#0072b2")
+
+# parsing the selection into a configuration data.table that has all necessary information to enable all features of the shiny app.
+# every row corresponds to ONE comparison in the input configuration file (or the one comparison of tsv mode)
 configuration <- data.table(key = NULL, assay = NULL, group_var = NULL, condition_names = NULL, tools = NULL, network_files = NULL)
 
 # parse selection
 selections <- strsplit(opt$selection, "-")[[1]]
-# get condition names first
+# get condition names and all used group variables (they can change between the two conditions) first 
 all_group_vars <- c()
 conditions <- list()
 for (s in selections) {
@@ -65,16 +72,20 @@ for (s in selections) {
   all_group_vars <-c(all_group_vars, strsplit(split_string[3], ":")[[1]])
 }
 
+# parsing the selection
 for (s in selections) {
   split_string <- strsplit(s, ",")[[1]]
   key <- split_string[1]
   assay <- split_string[2]
   group_var <- split_string[3]
   split_group_var <- strsplit(group_var, ":")[[1]]
+  # indicates which group_vars are used in each selection of the comparison
   group_var_idx <- paste(match(split_group_var, all_group_vars), collapse=":")
 
-  filter <- NULL
-  filter_val <- NULL
+  # if no filter was used, add NULL values.
+  filter <- NA
+  filter_val <- NA
+  # if the filter is set, the selection string was modified (by the pipeline) to have filter as last keyword
   if (split_string[length(split_string)] == "filter") {
     group_vals <- split_string[5:(length(split_string) - 3)]
 
@@ -83,6 +94,7 @@ for (s in selections) {
   } else {
     group_vals <- split_string[5:(length(split_string) - 2)]
   }
+  # parsing all information
   group_vals <- paste(group_vals, collapse=",")
   all_files <- list.files(path = file.path(opt$results.path, key), full.names = TRUE, recursive = TRUE)
   network_files <- c(grep("aggregated_filtered_network", all_files, value = TRUE))
@@ -97,6 +109,7 @@ for (s in selections) {
   configuration <- rbind(configuration, config)
 }
 
+# Changing list of data.table into 
 configuration <- unique(configuration)
 duplicates <- configuration[duplicated(configuration$key),]
 # Must be because of differing group_vars ->
@@ -322,7 +335,7 @@ server <- function(input, output, session) {
   })
 
   output$comparison_plots <- renderUI({
-    if(opt$mode != "seurat"){
+    if(opt$mode == "tsv" | is.na(configuration[configuration$key == input$Key_pick,]$filter)){
       return(NULL)
     }
 
@@ -339,7 +352,7 @@ server <- function(input, output, session) {
   })
 
   output$compare_button <- renderUI({
-    if(opt$mode == "tsv") {
+    if(opt$mode == "tsv" | is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
       return(NULL)
     }
     helper(
@@ -670,75 +683,7 @@ server <- function(input, output, session) {
     displayed_network$fn$x$nodes$comparisonGRNSwitch <- input$comparison_grn_switch_nodes
   })
   
-  plot_linear_model <- function(x, y, conditions, colors, title) {
-    df <- data.frame(
-      x = x,
-      y = y,
-      Condition = conditions,
-      col = colors
-    )
-    
-    x_max <- ceiling(max(x))
-    x_min <- floor(min(x))
-    y_max <- ceiling(max(y))
-    y_min <- floor(min(y))
-
-    if (sum(is.na(df)) > 0.9 * nrow(df)) { # dont plot anything if there are more than 90% NA values in the dataframe
-      return(NULL)
-    }
-    cols <- df$col
-    names(cols) <- df$Condition
-    plot <- ggplot(df, aes(x = x, y = y, colour = Condition)) +
-      geom_point() +
-      scale_colour_manual(values = cols) +
-      geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) + 
-      ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
-
-    plot <- plot + 
-      theme_classic() +
-      labs(x = "Source gene", y = "Target gene") + 
-      theme(axis.title = element_text(size = 14), 
-            axis.text = element_text(size = 12),
-            legend.text = element_text(size = 12),
-            legend.title = element_text(size = 14),
-            plot.title = element_text(size = 15)) +
-      scale_x_continuous(limits = c(x_min, x_max)) + scale_y_continuous(limits = c(y_min, y_max))
-    return(plot)
-  }
-  
-
-# Violin and linear model plot for the shown DiffGRN
-  output$violin_plot <- renderPlot({
-    if (is.null(input$id_node)) {
-      return(NULL)
-    }
-    Idents(displayed_network$adata) <- 'group'
-    # asub <- 
-    filter_name <- configuration[configuration$key == input$Key_pick,]$filter
-    if (!is.na(filter_name)) {
-      filter_val <- strsplit(configuration[configuration$key == input$Key_pick,]$filter_val, ":")[[1]]
-      asub <- displayed_network$adata[, displayed_network$adata@meta.data[[filter_name]] %in% filter_val]
-    } else {
-      asub <- displayed_network$adata
-    }
-    condition_names <- sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
-    adata_gene_name <- rownames(asub)[which(toupper(rownames(asub)) == input$id_node)]
-    plot <- try(VlnPlot(asub, features = adata_gene_name, idents = condition_names, cols = colors, y.max=displayed_network$metacells_maxVal), silent=TRUE)
-    output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
-    plot
-  })
-
-  output$linear_model_plot <- renderPlot({    
-    if (is.null(input$id_source)) {
-      return(NULL)
-    }
-
-    expr1_x <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == input$id_source, -1])    
-    expr1_y <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == input$id_target, -1])    
-    expr2_x <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_source, -1])    
-    expr2_y <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_target, -1])
-    
-    # outlier detection
+  plot_linear_model <- function(expr1_x, expr1_y, expr2_x, expr2_y) {
     expr1x_mean <- mean(expr1_x)
     expr1y_mean <- mean(expr1_y)
     expr2x_mean <- mean(expr2_x)
@@ -762,18 +707,85 @@ server <- function(input, output, session) {
     expr2_x <- expr2_x[expr2_mask]
     expr2_y <- expr2_y[expr2_mask]
 
-    x <- c(expr1_x, expr2_x)
-    y <- c(expr1_y, expr2_y)
-
     condition_names<-sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
     conditions <- c(rep(condition_names[1], length(expr1_x)), rep(condition_names[2], length(expr2_x)))
     cols <- c(rep(colors[1], length(expr1_x)), rep(colors[2], length(expr2_x)))
     title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, condition_names[1], condition_names[2])
 
-    plot <- plot_linear_model(x, y, conditions, cols, title)
-    output$downloadGRNLinearModelPlot <- download_plot(plot, title)
+    df <- data.frame(
+      x = c(expr1_x, expr2_x),
+      y = c(expr1_y, expr2_y),
+      Condition = conditions,
+      col = cols
+    )
+    print(df$x)
+    print(df$y)
+    x_max <- ceiling(max(df$x))
+    x_min <- floor(min(df$x))
+    y_max <- ceiling(max(df$y))
+    y_min <- floor(min(df$y))
 
+    if (sum(is.na(df)) > 0.9 * nrow(df)) { # dont plot anything if there are more than 90% NA values in the dataframe
+      return(NULL)
+    }
+    cols <- df$col
+    names(cols) <- df$Condition
+    plot <- ggplot(df, aes(x = x, y = y, colour = Condition)) +
+      geom_point() +
+      scale_colour_manual(values = cols) +
+      geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) + 
+      ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
+
+    plot <- plot + 
+      theme_classic() +
+      labs(x = "Source gene", y = "Target gene") + 
+      theme(axis.title = element_text(size = 14), 
+            axis.text = element_text(size = 12),
+            legend.text = element_text(size = 12),
+            legend.title = element_text(size = 14),
+            plot.title = element_text(size = 15)) +
+      scale_x_continuous(limits = c(x_min, x_max)) + scale_y_continuous(limits = c(y_min, y_max))
+    return(list(plot=plot, title=title))
+  }
+  
+
+# Violin and linear model plot for the shown DiffGRN
+  output$violin_plot <- renderPlot({
+    if (is.null(input$id_node)) {
+      return(NULL)
+    }
+    Idents(displayed_network$adata) <- 'group'
+    # asub <- 
+    filter_name <- configuration[configuration$key == input$Key_pick,]$filter
+    if (!is.na(filter_name)) {
+      filter_val <- strsplit(configuration[configuration$key == input$Key_pick,]$filter_val, ":")[[1]]
+      asub <- displayed_network$adata[, displayed_network$adata@meta.data[[filter_name]] %in% filter_val]
+    } else {
+      asub <- displayed_network$adata
+    }
+    condition_names <- sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
+    cols <- colors[c(1,2)]
+    names(cols) <- condition_names
+    adata_gene_name <- rownames(asub)[which(toupper(rownames(asub)) == input$id_node)]
+    plot <- VlnPlot(asub, features = adata_gene_name, idents = condition_names, cols = cols, y.max=displayed_network$metacells_maxVal)
+    output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
+  })
+
+  output$linear_model_plot <- renderPlot({    
+    if (is.null(input$id_source)) {
+      return(NULL)
+    }
+
+    expr1_x <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == input$id_source, -1])    
+    expr1_y <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == input$id_target, -1])    
+    expr2_x <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_source, -1])    
+    expr2_y <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_target, -1])
+    
+    res <- plot_linear_model(expr1_x, expr1_y, expr2_x, expr2_y)
+    output$downloadGRNLinearModelPlot <- download_plot(res[[1]], res[[2]])
+
+    res[[1]]
   })
   
 
@@ -897,10 +909,12 @@ server <- function(input, output, session) {
       # Set the ident to the newly created meta.cell variable
       Idents(subset)<-"meta.cell"
       # Aggregate the expression
-      agg<-AggregateExpression(subset, slot = "data", return.seurat = T, assays = assay)
-
+      agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
+      agg@assays[[opt$assay]]@counts <-agg@assays[[opt$assay]]@counts / cells.p.metasample
+      agg <- NormalizeData(object = agg, assay = opt$assay)
       # export the results
-      result.data.frame<-agg@assays[[assay]]@data
+
+      result.data.frame <- agg@assays[[opt$assay]]@data
       row.names<-rownames(result.data.frame)
       column.names<-paste0(paste0(s[[g]], collapse='_'), '_', colnames(result.data.frame))
       result.data.frame<-as.data.table(result.data.frame)
@@ -932,39 +946,11 @@ server <- function(input, output, session) {
     expr2_y <- as.numeric(cond2_data[Gene == toupper(isolate(input$id_target)), -1])
     
     # outlier detection
-    expr1x_mean <- mean(expr1_x)
-    expr1y_mean <- mean(expr1_y)
-    expr2x_mean <- mean(expr2_x)
-    expr2y_mean <- mean(expr2_y)
+     
+    res <- plot_linear_model(expr1_x, expr1_y, expr2_x, expr2_y)
+    output$downloadGRNLinearModelPlot <- download_plot(res[[1]], res[[2]])
 
-    expr1x_sd <- sd(expr1_x)
-    expr1y_sd <- sd(expr1_y)
-    expr2x_sd <- sd(expr2_x)
-    expr2y_sd <- sd(expr2_y)
-
-    expr1x_mask <- !(expr1_x > (expr1x_mean + 2*expr1x_sd) | expr1_x < (expr1x_mean - 2*expr1x_sd)) 
-    expr1y_mask <- !(expr1_y > (expr1y_mean + 2*expr1y_sd) | expr1_y < (expr1y_mean - 2*expr1y_sd)) 
-    expr2x_mask <- !(expr2_x > (expr2x_mean + 2*expr2x_sd) | expr2_x < (expr2x_mean - 2*expr2x_sd))
-    expr2y_mask <- !(expr2_y > (expr2y_mean + 2*expr2y_sd) | expr2_y < (expr2y_mean - 2*expr2y_sd))
-
-    expr1_mask <- expr1x_mask & expr1y_mask 
-    expr2_mask <- expr2x_mask & expr2y_mask 
-
-    expr1_x <- expr1_x[expr1_mask]
-    expr1_y <- expr1_y[expr1_mask]
-    expr2_x <- expr2_x[expr2_mask]
-    expr2_y <- expr2_y[expr2_mask]
-
-    x <- c(expr1_x, expr2_x)
-    y <- c(expr1_y, expr2_y)
-
-    conditions <- c(rep(condition_names[1], length(expr1_x)), rep(condition_names[2], length(expr2_x)))
-    cols <- c(rep(colors[1], length(expr1_x)), rep(colors[2], length(expr2_x)))
-    title <- sprintf("%s -> %s || %s vs. %s", input$id_source, input$id_target, condition_names[1], condition_names[2])
-      
-    plot <- plot_linear_model(x, y, conditions, cols, title)
-    output$downloadComparisonLinearModelPlot <- download_plot(plot, title)
-    plot
+    res[[1]]
   })
 
   output$comparison_linear_model_plot <- renderPlot({comparison_linear_model_plot()})
