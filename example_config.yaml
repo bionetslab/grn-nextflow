@@ -12,7 +12,9 @@ comparison: # Always keep this line as is
         # You can name the selections (here: s1, s2) anyway that you want
         s1:
           # output_file: Determines the folder name where the results for the given selection are saved. No file types are needed, only the filename.
-          # Must be unique across the two selections in one comparison. DO NOT USE ".", ":", "-", ";", "," IN THE NAME!
+          # Must be unique across the two selections in one comparison. 
+          ### NOTE: ###
+          # DO NOT USE ".", ":", "-", ";", "," IN THE NAME! Also refrain from using "out_" as part of the string this will be appended in the pipeline and may cause issues in the shiny app.
           output_file: "Doc_Spleen_d28"
           # The following key : value pairs in the selection are data specific! This is used to group the cells for the specific selection
           # Key (here: infection, tissue, ...) represents the column name in the data object

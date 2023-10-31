@@ -82,7 +82,7 @@ for (s in selections) {
   # indicates which group_vars are used in each selection of the comparison
   group_var_idx <- paste(match(split_group_var, all_group_vars), collapse=":")
 
-  # if no filter was used, add NULL values.
+  # if no filter was used, add NA values.
   filter <- NA
   filter_val <- NA
   # if the filter is set, the selection string was modified (by the pipeline) to have filter as last keyword
@@ -94,7 +94,7 @@ for (s in selections) {
   } else {
     group_vals <- split_string[5:(length(split_string) - 2)]
   }
-  # parsing all information
+  # parsing all information. "," separates the different values (key, assay, group_var, ...). 
   group_vals <- paste(group_vals, collapse=",")
   all_files <- list.files(path = file.path(opt$results.path, key), full.names = TRUE, recursive = TRUE)
   network_files <- c(grep("aggregated_filtered_network", all_files, value = TRUE))
@@ -109,7 +109,8 @@ for (s in selections) {
   configuration <- rbind(configuration, config)
 }
 
-# Changing list of data.table into 
+# Postprocessing configuration data.table so that only 1 row exists per given comparison in the configuration file
+# For one column of a row: "-" separates between values of selections. ":" separates list values of one value type (e.g. multiple group_vars are separated by :). 
 configuration <- unique(configuration)
 duplicates <- configuration[duplicated(configuration$key),]
 # Must be because of differing group_vars ->
@@ -119,6 +120,7 @@ if (nrow(duplicates) > 0) {
     orig_row <- configuration[(i*2) - 1, ]
 
     configuration[(i*2) - 1, ]$group_vals <- paste(orig_row$group_vals, dup_row$group_vals, sep = "-")
+    # used to map the used group vars of the selection to the list of all used group vars.
     configuration[(i*2) - 1, ]$group_var_idx <- paste(orig_row$group_var_idx, dup_row$group_var_idx, sep = "-")
     configuration[(i*2) - 1, ]$group_var <- paste(orig_row$group_var, dup_row$group_var, sep=":")
   }
@@ -132,9 +134,11 @@ if (opt$mode != "tsv") {
   group.var<-unique(strsplit(configuration[1]$group_var, ':')[[1]])
   Idents(adata)<-group.var
 }
+# Creating the UI of the Seurat object
 ui <- 
   navbarPage(
     theme = shinytheme("cerulean"), title = "InterNet Xplorer", 
+    # Moving the notifications into the top left corner for better visibility
     tags$head(
       tags$style(
         HTML(".shiny-notification {
@@ -150,7 +154,7 @@ ui <-
       sidebarLayout(
         mainPanel(
           fluidRow(class="network",
-            # adding legend                
+            # Legend of the displayed network                
             htmltools::div(
               style = "padding: 10px; background-color: white;",
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[1])),
@@ -180,13 +184,12 @@ ui <-
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[3])),
               sprintf("Base GRN Repressor"),
             ),
-            # adding DiffGRN
+            # Displayed DGRN
             forceNetworkOutput("net"),
             hr(style = "border-top: 0.5px solid #000000; opacity: 0.2;")
           ),
-          # adding Option switches
+          # Option switches
           fluidRow(class="selection switches",
-            # h3("Options:"),
             column(3,
               selectInput(
                 'Key_pick',
@@ -244,6 +247,7 @@ ui <-
           ),
           width = 6
         ),
+        # Violin and linear model plots
         sidebarPanel(
           fluidRow(
             column(6,
@@ -265,6 +269,7 @@ ui <-
         ), 
       ),
     ),
+    ### Second Tab (View Seurat object information) ### 
     tabPanel(
       "Gene Expression", 
       h2("Gene Expression"),
@@ -322,30 +327,17 @@ ui <-
     )
   )
 
+# Backend of the shiny app
 server <- function(input, output, session) {
+  # Needed to show helper buttons in the shiny app
   observe_helpers(withMathJax = TRUE)
-#   # The forcenetwork needs to be a reactive value to change the node/link values
+
+  # The forcenetwork needs to be a reactive value to change the node/link values
   output$mode <- renderText({
     paste0(opt$mode)
   })
 
-  output$comparison_plots <- renderUI({
-    if(opt$mode == "tsv" | is.na(configuration[configuration$key == input$Key_pick,]$filter)){
-      return(NULL)
-    }
-
-    fluidRow(
-      column(6, 
-        plotOutput("comparison_violin_plot"),
-        downloadButton("downloadComparisonViolinPlot", "Download Plot")
-        ),      
-      column(6, 
-        plotOutput("comparison_linear_model_plot"),
-        downloadButton("downloadComparisonLinearModelPlot", "Download Plot")
-        ),
-    )
-  })
-
+  # UI of the comparison button/plots. This is only shown if there is something to compare to. For this reason, it has to be coded on the server side.
   output$compare_button <- renderUI({
     if(opt$mode == "tsv" | is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
       return(NULL)
@@ -366,12 +358,43 @@ server <- function(input, output, session) {
     )
   })
 
+  output$comparison_plots <- renderUI({
+    if(opt$mode == "tsv" | is.na(configuration[configuration$key == input$Key_pick,]$filter)){
+      return(NULL)
+    }
+
+    fluidRow(
+      column(6, 
+        plotOutput("comparison_violin_plot"),
+        downloadButton("downloadComparisonViolinPlot", "Download Plot")
+        ),      
+      column(6, 
+        plotOutput("comparison_linear_model_plot"),
+        downloadButton("downloadComparisonLinearModelPlot", "Download Plot")
+        ),
+    )
+  })
+
+  # all needed reactive values of the displayed networks.
+  # diffGRN_network_data: Network data of current DGRN network
+  # GRN_network_data:     Network data of current GRN network (NULL if "NA" selected or if it was not calculated in the pipeline)
+  # network_data:         Merged network data of diffGRN_network_data and GRN_network_data
+  # fn:                   Rendered network
+  # links:                Links of the rendered network (needed for comparison to uploadable gene list)
+  # diffConditions:       Differential Conditions of the current selected key
+  # grnConditions:        "Condition" of the current selected GRN. WIP: remove it because it is probably unneccesary
+  # adata:                adata object. Stored separately to add "group", "comparison" column for the violin/linear model plots to get the correct cells.
+  # cond1_metacells_data: Metacell data of differential condition 1 (preloaded when selecting a key to save computation time)
+  # cond2_metacells_data: Metacell data of differential condition 2 (preloaded when selecting a key to save computation time)
+  # metacells_maxVal:     Maximum value of the metacell data. Used to keep a consistent range of the axis for the violin plot. The linear model plots do NOT have the same range because of visibility.
+
   displayed_network <- reactiveValues(
     diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
     fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = adata, 
-    cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_minVal = 0, metacells_maxVal = 0
+    cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_maxVal = 0
   )
 
+  # creates the displayed network using network3D. For more information see https://christophergandrud.github.io/networkD3/
   create_network <- function() {
     links <- data.frame(source = displayed_network$network_data[, 2], target = displayed_network$network_data[, 1], width=displayed_network$network_data[, 3]*100, stringsAsFactors=F)
     nodes <- data.frame(name = unique(c(unique(links$source), unique(links$target))), group = 1)
@@ -416,21 +439,22 @@ server <- function(input, output, session) {
     displayed_network$fn <- fn
   }
   
-  ## Observer event for selecting the comparison key 
+  ## Observer event for selecting the input key. Each row in the configuration data.frame (computed at the top) is identified by ONE UNIQUE key (if the config file does not use the same keys twice. If so, the behaviour is undefined)
   observeEvent(input$Key_pick, {
-    # setting base network if key is switched
+    # getting all network files of the correct row
     network.file <- strsplit(configuration[configuration$key == input$Key_pick,]$network_files, ",")[[1]][1]
-    # finding the correct network based on input$Key_pick and input$DiffGRN_pick
+    # trying to load the data of the first network file. If no edges were found using the selected approach (mainly happens with z_scores), nothing will be done.
     tmp <- try(read.table(file = network.file, header = TRUE))
     if (class(tmp) == "try-error") {
       showNotification(paste0("No edges were found for the condition ", input$DiffGRN_pick, "! Displaying network of previously selected condition."), type = "warning")
     } else {
       displayed_network$network_data <- tmp
+      # This is a remnant of the idea of a GRN only mode. WIP to integrate this.
       if(input$DiffGRN_pick != "No tools were chosen for DGRN Inference") { # -> initial selected network will be a differential network
         displayed_network$diffGRN_network_data <- displayed_network$network_data
         displayed_network$diffConditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
 
-        # creating a column in the adata object to match the conditions to the cells
+        # creating a column "group" in the adata object to match the conditions to the cells
         group_var.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var, ":")[[1]]
         group_vals.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_vals, "-")[[1]]
         group_idx.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var_idx, "-")[[1]]
@@ -450,9 +474,11 @@ server <- function(input, output, session) {
           }
           displayed_network$adata$group[filter_vector] <- gsub(pattern = '_', replacement = ' ', displayed_network$diffConditions[i])        
         }
-      } else { # TODO: Fix grn only mode
+      } else { # WIP: Fix grn only mode
         displayed_network$GRN_network_data <- displayed_network$network_data
       }
+      
+      # render text for the network legend according to the condition names of the selected network
       output$condition1_activator <- renderText({
         paste("Stronger in ", gsub(displayed_network$diffConditions[1], pattern="_", replacement=" "), " (Activator)")
       })
@@ -466,6 +492,7 @@ server <- function(input, output, session) {
         paste("Stronger in ", gsub(displayed_network$diffConditions[2], pattern="_", replacement=" "), " (Repressor)")
       })
       
+      # render UI of the filter selections.
       output$select_conditions <- renderUI({
         if(opt$mode == "tsv" || is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
           return(NULL)
@@ -500,10 +527,12 @@ server <- function(input, output, session) {
       updateTextInput(session, "DiffGRN_pick", value=opt$dgrntools[1])
       updateTextInput(session, "GRN_pick", value=opt$grntools[1])
 
+      # loading the metacell expression data for the two differential conditions
+      # TODO: Debug this if no metacells were selected.
       gexp_path <- paste(opt$results.path, input$Key_pick, sep="/")
       all_files <- list.files(gexp_path)
       out_files <- grep("^out", all_files, value = TRUE)
-      out_files1_condition_name <- gsub(pattern="out", "", out_files[1])
+      out_files1_condition_name <- gsub(pattern="out_", "", out_files[1])
       out_files1_condition_name <- gsub(pattern=".tsv", "", out_files1_condition_name)
       if (out_files1_condition_name[1] == displayed_network$diffConditions[1]) {
         displayed_network$cond1_metacells_data <- read.table(file = paste(gexp_path, out_files[1], sep="/"), header = TRUE, sep = "\t")
@@ -512,6 +541,8 @@ server <- function(input, output, session) {
         displayed_network$cond2_metacells_data <- read.table(file = paste(gexp_path, out_files[1], sep="/"), header = TRUE, sep = "\t")
         displayed_network$cond1_metacells_data <- read.table(file = paste(gexp_path, out_files[2], sep="/"), header = TRUE, sep = "\t")
       }
+
+      # Computing the maximum value of the metacells
       displayed_network$metacells_maxVal <- ceiling(
         max(
           c(
@@ -524,36 +555,21 @@ server <- function(input, output, session) {
     }
   })
   
+  # observer Event for the DGRN input button
   observeEvent(input$DiffGRN_pick, {
+    # Nothing happens in GRN only mode (GRN only mode is WIP)
     if (input$DiffGRN_pick != "No tools were chosen for DGRN Inference") {
+      # loading the corresponding network files
       all_network.files <- strsplit(configuration[configuration$key == input$Key_pick,]$network_files, ",")[[1]]
       # finding the correct network based on input$Key_pick and input$DiffGRN_pick
       network.file <- grep(paste(input$Key_pick, input$DiffGRN_pick, sep="/"), all_network.files, value = TRUE)
+      # trying to load the data. Nothing happens if no edges were found using the selected approach
       tmp <- try(read.table(file = network.file, header = TRUE))
       if (class(tmp) == "try-error") {
         showNotification(paste0("No edges were found for the condition ", input$DiffGRN_pick, "! Displaying network of previously selected condition."), type = "warning")
       } else {
+        # Changing the values of displayed network to the new network data.
         displayed_network$diffGRN_network_data <- tmp
-        displayed_network$diffConditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
-        group_var.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var, ":")[[1]]
-        group_vals.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_vals, "-")[[1]]
-        group_idx.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var_idx, "-")[[1]]
-
-        displayed_network$adata$group <- "NA"
-        for (i in 1:length(group_idx.all)) {
-          group_idx <- as.numeric(strsplit(group_idx.all[i], ":")[[1]])
-          group_var <- group_var.all[c(group_idx)]
-          group_val.selection <- strsplit(group_vals.all[i], ",")[[1]]
-          filter_vector <- nrow(adata)
-          idx <- 1
-          for (col_name in group_var) {
-            col_values <- adata@meta.data[, col_name]
-            group_val <- strsplit(group_val.selection, ":")[[1]][idx]
-            filter_vector <- filter_vector & (col_values == group_val)
-            idx <- idx + 1
-          }
-          displayed_network$adata$group[filter_vector] <- gsub(pattern = '_', replacement = ' ', displayed_network$diffConditions[i])        
-        }
         if (!is.null(displayed_network$GRN_network_data)) {
           displayed_network$network_data <- rbind(displayed_network$diffGRN_network_data, displayed_network$GRN_network_data)
           displayed_network$network_data[[1]] <-  str_to_title(displayed_network$network_data[[1]])
@@ -561,17 +577,21 @@ server <- function(input, output, session) {
         } else {
           displayed_network$network_data <- displayed_network$diffGRN_network_data
         }
+        # creating the new network
         create_network()
       }
     }
   })
   
+  # Observer event for the GRN input button
   observeEvent(input$GRN_pick, {
+    # Only do something if a GRN was computed in the pipeline
     if (input$GRN_pick != "No tools were chosen for GRN Inference") {  
       if (input$GRN_pick != "NA") {
         all_network.files <- strsplit(configuration[configuration$key == input$Key_pick,]$network_files, ",")[[1]]
-        # finding the correct network based on input$Key_pick and input$DiffGRN_pick
+        # finding the correct network based on input$Key_pick and input$GRN_pick
         network.file <- grep(paste(input$Key_pick, input$GRN_pick, sep="/"), all_network.files, value = TRUE)
+        # Changing the values of displayed network to the new network data.
         displayed_network$GRN_network_data <- read.table(file = network.file, header = TRUE)
         displayed_network$grnConditions <- displayed_network$GRN_network_data$condition
         if (!is.null(displayed_network$diffGRN_network_data)) {
@@ -585,11 +605,12 @@ server <- function(input, output, session) {
         displayed_network$GRN_network_data <- NULL
         displayed_network$network_data <- displayed_network$diffGRN_network_data
       }
+      # creating the new network
       create_network()
     }
   })
 
-#    ### render displayed force network ###
+# renders the displayed forcenetwork and modifies some of the underlying JS code (see comments in the string for more details)
   output$net <- renderForceNetwork(
     fnrender <- htmlwidgets::onRender(
       displayed_network$fn,
@@ -651,11 +672,13 @@ server <- function(input, output, session) {
     )
   )
  
+  # renders the geneCard link for the selected gene
   output$geneLink <- renderUI({
     url <- a(sprintf("Genecard %s link", input$id_node), href=sprintf("https://www.genecards.org/cgi-bin/carddisp.pl?gene=%s", input$id_node), target="_blank")
     tagList(sprintf("%s: ", input$id_node), url)
   })
 
+  # loads the data of the uploadable gene list
   observeEvent(input$comparison_grn_file, {
     comparison_network <- read.table(input$comparison_grn_file$datapath, sep = ",", header = TRUE)[, 2:3]
     comparison_nodes <- unique(c(comparison_network[, 1], comparison_network[, 2]))
@@ -663,6 +686,7 @@ server <- function(input, output, session) {
     displayed_network$fn$x$nodes$existsInComparisonGRN <- displayed_network$fn$x$nodes$name %in% comparison_nodes 
   })
 
+  # observer events for showing the overlap (node, edges) of the uploadable gene list and the displayed network
   observeEvent(input$comparison_grn_switch_edges, {
     if(is.null(input$comparison_grn_file)) {
       return(NULL)
@@ -677,7 +701,9 @@ server <- function(input, output, session) {
     displayed_network$fn$x$nodes$comparisonGRNSwitch <- input$comparison_grn_switch_nodes
   })
   
+  # function for plotting a linear model of two conditions given the x,y expression data of both
   plot_linear_model <- function(expr1_x, expr1_y, expr2_x, expr2_y) {
+    # remove outliers for linear model plotting (|Z_score| > 2 <-> outlier)
     expr1x_mean <- mean(expr1_x)
     expr1y_mean <- mean(expr1_y)
     expr2x_mean <- mean(expr2_x)
@@ -701,6 +727,7 @@ server <- function(input, output, session) {
     expr2_x <- expr2_x[expr2_mask]
     expr2_y <- expr2_y[expr2_mask]
 
+    # prepare plot and plot linear model for the two conditions
     condition_names<-sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
     conditions <- c(rep(condition_names[1], length(expr1_x)), rep(condition_names[2], length(expr2_x)))
     cols <- c(rep(colors[1], length(expr1_x)), rep(colors[2], length(expr2_x)))
@@ -717,14 +744,11 @@ server <- function(input, output, session) {
     y_max <- ceiling(max(df$y))
     y_min <- floor(min(df$y))
 
-    if (sum(is.na(df)) > 0.9 * nrow(df)) { # dont plot anything if there are more than 90% NA values in the dataframe
-      return(NULL)
-    }
-    cols <- df$col
-    names(cols) <- df$Condition
+    mapped_cols <- colors[c(1:2)]
+    names(mapped_cols) <- condition_names
     plot <- ggplot(df, aes(x = x, y = y, colour = Condition)) +
       geom_point() +
-      scale_colour_manual(values = cols) +
+      scale_colour_manual(values = mapped_cols) +
       geom_smooth(method = "lm", formula = "y ~ x", se = FALSE) + 
       ggtitle(title) + theme(plot.title = element_text(hjust = 0.5))
 
@@ -781,7 +805,7 @@ server <- function(input, output, session) {
   })
   
 
-#   ### Comparison Plots ###
+  # Comparison violin and linear model plots if a filter was set
   comparison_violin_plot <- eventReactive(input$compare_button, {
     # Can only make comparison plots if the input file type was a Seurat or Scanpy object
     if(opt$mode == "tsv" || is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
@@ -800,6 +824,7 @@ server <- function(input, output, session) {
       showNotification(paste0("Selected filter key has not the same set filter in the configuration file. Therefore, these conditions cannot be compared!"), type = "error")
       return(NULL)
     }
+    # computing a "comparison" column in the Seurat object to mark the correct cells of the selected comparison key
     filter_val <- input$filter_value
     group_var.all <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_var, ":")[[1]]
     group_vals.all <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_vals, "-")[[1]]
@@ -857,9 +882,12 @@ server <- function(input, output, session) {
     condition_names <- strsplit(configuration[configuration$key == input$filter_key_pick,]$condition_names, ",")[[1]]
     condition_names <- sapply(condition_names, function(x) gsub(pattern = '_', replacement = ' ', x))
     assay <- configuration[configuration$key == input$filter_key_pick,]$assay
+    
+    # TODO: pass values that were also used in the meta cell creation to this function so that they are the same.
     n.samples <- 100 
-    p.missing <- 50            
+    p.missing <- 10            
 
+    # Computing the metacells
     cond1_data <- NULL
     cond2_data <- NULL
     idx <- 1
@@ -947,6 +975,7 @@ server <- function(input, output, session) {
 
   output$comparison_linear_model_plot <- renderPlot({comparison_linear_model_plot()})
 
+  # function for downloading a plot
   download_plot <- function(plot, filename) {
     downloadHandler(
       filename = function() {
@@ -959,7 +988,7 @@ server <- function(input, output, session) {
     )
   }
 
-  ##########################
+  ########################## SECOND TAB (Seurat object information) ################################
   output$umap_plot<-renderPlot({
     FeaturePlot(adata, features = input$select_genes, ncol=6)
   })
