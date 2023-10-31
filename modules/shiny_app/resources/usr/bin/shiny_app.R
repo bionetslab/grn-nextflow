@@ -131,12 +131,7 @@ if (opt$mode != "tsv") {
   # adata <- adata$all
   group.var<-unique(strsplit(configuration[1]$group_var, ':')[[1]])
   Idents(adata)<-group.var
-
-  # #### ADD SOME CONVENIENCE VARIABLES
-  factor_groups<-names(which(sapply(adata@meta.data, class)=='factor'))
-
 }
-
 ui <- 
   navbarPage(
     theme = shinytheme("cerulean"), title = "InterNet Xplorer", 
@@ -288,7 +283,7 @@ ui <-
             selectInput(
               'select_primary_grouping',
               'Select primary grouping variable',
-              factor_groups,
+              colnames(adata@meta.data),
               selected = adata@meta.data[1],
               multiple = FALSE,
               selectize = TRUE,
@@ -298,7 +293,7 @@ ui <-
             selectInput(
               'select_secondary_grouping',
               'Select secondary grouping variable',
-              factor_groups,
+              colnames(adata@meta.data),
               selected = adata@meta.data[1],
               multiple = FALSE,
               selectize = TRUE,
