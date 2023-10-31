@@ -33,3 +33,4 @@ dependencies:
   - bioconductor-decoupler
   - bioconductor-dorothea
   - bioconductor-omnipathr
+  - r-sceasy
