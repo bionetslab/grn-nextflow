@@ -544,7 +544,6 @@ server <- function(input, output, session) {
           group_idx <- as.numeric(strsplit(group_idx.all[i], ":")[[1]])
           group_var <- group_var.all[c(group_idx)]
           group_val.selection <- strsplit(group_vals.all[i], ",")[[1]]
-          # print(group_val)  
           filter_vector <- nrow(adata)
           idx <- 1
           for (col_name in group_var) {
@@ -713,8 +712,6 @@ server <- function(input, output, session) {
       Condition = conditions,
       col = cols
     )
-    print(df$x)
-    print(df$y)
     x_max <- ceiling(max(df$x))
     x_min <- floor(min(df$x))
     y_max <- ceiling(max(df$y))
