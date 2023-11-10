@@ -3,7 +3,7 @@ process CREATE_METACELLS_SEURAT {
 
   input:
   path seurat_object
-  tuple val (key), val (assay), val (selection_criteria_keys), val(name), val (selection_criteria), val (cluster_name), val (cluster_ids)
+  tuple val (key), val (assay), val (selection_criteria_keys), val(name), val (selection_criteria)
   val mode
 
   output:
@@ -11,7 +11,7 @@ process CREATE_METACELLS_SEURAT {
 
   script:
   """
-  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -l $cluster_name -k $cluster_ids -a $assay -m $mode --key=$key
+  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -a $assay -m $mode --key=$key
   """
 }
 

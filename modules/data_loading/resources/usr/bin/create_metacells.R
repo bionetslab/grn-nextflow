@@ -41,10 +41,6 @@ option_list <- list(
               metavar="number"),
   make_option(c("-s", "--selection"), type = 'character', default="", 
               help="Selection criteria separated by colon"),
-  make_option(c("-l", "--cluster.name"), type = 'character', default="", 
-              help="Selection criteria separated by colon"),
-  make_option(c("-k", "--cluster.ids"), type = 'character', default="",
-              help="cluster ids"),
   make_option(c("-g", "--group.var"), type = 'character',
               help="Grouping variable(s) in meta.data object separated by colon",
               default = 'sample'),
@@ -80,18 +76,10 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   print(opt$group.var)
   print(opt$output.file)
   print(opt$assay)
-  print(opt$cluster.name)
-  if (opt$cluster.name == "null" || opt$cluster.ids == "null") {
-    opt$cluster.name <- NULL
-    opt$cluster.ids <- NULL
-  }
 
   opt$group.var<-strsplit(opt$group.var, ':')[[1]]
   opt$selection<-strsplit(opt$selection, ',')[[1]]
   opt$selection<-unname(sapply(opt$selection, function(x) strsplit(x ,":")))
-  if (!is.null(opt$cluster.name) && !is.null(opt$cluster.ids)) {
-    opt$cluster.ids<-strsplit(opt$cluster.ids, ':')[[1]]
-  }
   #load data and extract seurat object
   adata<-readRDS(opt$input.file)
   # adata<-adata$all
@@ -113,11 +101,6 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
       for (i in 2:length(opt$group.var)){
         select.cells<-intersect(select.cells, which(adata@meta.data[, opt$group.var[i]]==opt$selection[[g]][i]))
       }
-    }
-
-    # select clusters (multiple)
-    if (!is.null(opt$cluster.name) & !is.null(opt$cluster.ids)) {
-      select.cells<-intersect(select.cells, which(adata@meta.data[, opt$cluster.name] %in% as.numeric(opt$cluster.ids)))
     }
     # print(select.cells)
     select.cells.all <- c(select.cells.all, unlist(select.cells))
@@ -158,10 +141,10 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
 } else if (opt$mode == "tsv") {
 
   expression_matrix <- read.table(opt$input.file, header = TRUE, row.names = 1, sep = "\t")
-  subset <- CreateSeuratObject(counts = expression_matrix)
-  
+  # subset <- CreateSeuratObject(counts = expression_matrix)
+  subset <- FindVariableFeatures(expression_matrix, selection.method = "vst", nfeatures = 3000)
   # Find number of barcodes in object
-  n.cells <- nrow(subset@meta.data)
+  n.cells <- nrow(subset)
   # Compute number of cells to aggregate
   cells.p.metasample <- n.cells/n.samples
   # randomly assign each of the cells to a group
@@ -170,24 +153,18 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   # Set the ident to the newly created meta.cell variable
   Idents(subset) <- "meta.cell"
   # Aggregate the expression
-  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = "RNA")
-  # export the results
-  agg@assays[["RNA"]]@counts <-agg@assays[["RNA"]]@counts / cells.p.metasample
-
-  agg <- NormalizeData(object = agg, assay = opt$assay)
-  gexpr <- subset@assays[["RNA"]]@data
-  select<-which(rowSums(gexpr==0)/(ncol(gexpr)-1)<(opt$p.missing/100))
-  subset <- subset[select, ]
-  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T)
-  # export the results
-  result.data.frame<-agg@assays[[opt$assay]]@counts / cells.p.metasample
-
+  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = 'RNA') 
+  
+  agg[['RNA']]$counts <- agg[['RNA']]$counts / cells.p.metasample
+  result.data.frame <- agg[['RNA']]$counts
   row.names<-rownames(result.data.frame)
-  column.names<-paste("metaCell", 1:n.samples, sep="")
+  column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
   result.data.frame<-as.data.table(result.data.frame)
   result.data.frame<-cbind(row.names, result.data.frame)
   colnames(result.data.frame)<-c('Gene', column.names)
-  # result.data.frame<-result.data.frame[select, ]
+
+  select<-which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(opt$p.missing/100))
+  result.data.frame<-result.data.frame[select, ]
   # save the aggregated data frame into a tsv sheet
   fwrite(result.data.frame, file = file.path(opt$output.file), sep='\t')
 

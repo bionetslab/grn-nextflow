@@ -68,11 +68,13 @@ def read_config() {
 									covariate_config_asColumnSeparatedList[cov_index].add(elem)
 								}
 							} else {
+								// duplicate list #length(list)-1 times
+								cov_before = covariate_config_asColumnSeparatedList[cov_index]
 								for (int j = 0; j <= selection_value.size()-2; j++) {
-									covariate_config_asColumnSeparatedList[cov_index].add(covariate_config_asColumnSeparatedList[cov_index][0])
+									covariate_config_asColumnSeparatedList[cov_index] += cov_before
 								}
 								for (int j = 0; j <= covariate_config_asColumnSeparatedList[cov_index].size()-1; j++) {
-									covariate_config_asColumnSeparatedList[cov_index][j] = covariate_config_asColumnSeparatedList[cov_index][j] + ":" + selection_value[j]
+									covariate_config_asColumnSeparatedList[cov_index][j] = covariate_config_asColumnSeparatedList[cov_index][j] + ":" + selection_value[j % selection_value.size()]
 								}
 							}
 						} else {
@@ -106,26 +108,26 @@ def read_config() {
 	    	}
 
 	    	// adding two null values for name and id of a filter to match the input cardinality if the filter value is given
-	    	if (value.filter == null) {
-	    	  for (int i = selec_index_start; i < selec_index_end; i++) {
-	    	      selection[i].add(value.filter)
-	    	      selection[i].add(value.filter)
-	    	    }
-	    	} else {
-	    	  filter = value.filter
-	    	  filter.each { filterKey, filterVal ->
-	    	    for (int i = selec_index_start; i < selec_index_end; i++) {
-	    	      if (filterVal instanceof List) {
-	    	        selection[i].add(filterVal.join(":"))
-	    	      } else {
-	    	        selection[i].add(filterVal)
-	    	      }
-      			}
-      		  }
-			}
+	    	// if (value.filter == null) {
+	    	//   for (int i = selec_index_start; i < selec_index_end; i++) {
+	    	//       selection[i].add(value.filter)
+	    	//       selection[i].add(value.filter)
+	    	//     }
+	    	// } else {
+	    	//   filter = value.filter
+	    	//   filter.each { filterKey, filterVal ->
+	    	//     for (int i = selec_index_start; i < selec_index_end; i++) {
+	    	//       if (filterVal instanceof List) {
+	    	//         selection[i].add(filterVal.join(":"))
+	    	//       } else {
+	    	//         selection[i].add(filterVal)
+	    	//       }
+      		// 	}
+      		//   }
     	}
 		selec_index_start = selec_index_end
     	selec_index_end = selec_index_start + 1
 	}
+	println selection
 	return selection
 }

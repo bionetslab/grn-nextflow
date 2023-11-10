@@ -28,9 +28,9 @@ workflow SHINY_APP {
               // Function of this: adds every combination possible of the covarite config -> duplicates list if a list is given as a value of a key and then proceeds to create every combination
               covariate_config_keys = []
               covariate_config.each { selecKey, selecVals ->
-                covariate_config_keys.add([])
-                covariate_config_asColumnSeparatedList.add([])
-                selecVals.each { selection_id, selection_value ->
+				covariate_config_keys.add([])
+				covariate_config_asColumnSeparatedList.add([])
+				selecVals.each { selection_id, selection_value ->
                   if (selection_id == "output_file") {
                     output_files.add(selection_value)
                   } else {
@@ -41,11 +41,14 @@ workflow SHINY_APP {
                           covariate_config_asColumnSeparatedList[cov_index].add(elem)
                         }
                       } else {
+                        // duplicate list #length(list)-1 times
+                        cov_before = covariate_config_asColumnSeparatedList[cov_index]
                         for (int j = 0; j <= selection_value.size()-2; j++) {
-                          covariate_config_asColumnSeparatedList[cov_index].add(covariate_config_asColumnSeparatedList[cov_index][0])
+                          covariate_config_asColumnSeparatedList[cov_index] += cov_before
                         }
+                        // add the entries of the selction_values list to the duplicated entries
                         for (int j = 0; j <= covariate_config_asColumnSeparatedList[cov_index].size()-1; j++) {
-                          covariate_config_asColumnSeparatedList[cov_index][j] = covariate_config_asColumnSeparatedList[cov_index][j] + ":" + selection_value[j]
+                          covariate_config_asColumnSeparatedList[cov_index][j] = covariate_config_asColumnSeparatedList[cov_index][j] + ":" + selection_value[j % selection_value.size()]
                         }
                       }
                     } else {
@@ -59,7 +62,6 @@ workflow SHINY_APP {
                     }
                   }
                 }
-                
                 cov_index = cov_index + 1
               }
 
@@ -72,28 +74,6 @@ workflow SHINY_APP {
                 selection[selec_index_start + i].add(covariate_config_keys[i].join(":"))
                 selection[selec_index_start + i].add(output_files[i])
                 selection[selec_index_start + i].add(covariate_config_asColumnSeparatedList[i].join(","))
-              }
-
-              // adding two null values for name and id of a filter to match the input cardinality if the filter value is given
-              if (value.filter == null) {
-                for (int i = selec_index_start; i < selec_index_end; i++) {
-                    selection[i].add(value.filter)
-                    selection[i].add(value.filter)
-                  }
-              } else {
-                filter = value.filter
-                filter.each { filterKey, filterVal ->
-                  for (int i = selec_index_start; i < selec_index_end; i++) {
-                    if (filterVal instanceof List) {
-                      selection[i].add(filterVal.join(":"))
-                    } else {
-                      selection[i].add(filterVal)
-                    }
-                  }
-                }
-                for (int i = selec_index_start; i < selec_index_end; i++) {
-                  selection[i].add("filter")
-                }
               }
             }
             selec_index_start = selec_index_end
@@ -120,7 +100,8 @@ workflow SHINY_APP {
         } else if (params.mode == "anndata") {
   	  	  seurat_file = "./seurat_object.rds"
         } else if (params.mode == "tsv") {
-          seurat_file = "NA"
+          selection = params.comparison_id
+          seurat_file = 'NA'
         }
 
         CREATE_SHINY_APP(seurat_file, selection, diffgrn_tools, grn_tools, params.mode)

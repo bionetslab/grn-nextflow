@@ -59,81 +59,105 @@ colors <- c("#cc79a7", "#009e73", "#0072b2")
 # every row corresponds to ONE comparison in the input configuration file (or the one comparison of tsv mode)
 configuration <- data.table(key = NULL, assay = NULL, group_var = NULL, condition_names = NULL, tools = NULL, network_files = NULL)
 
-# parse selection
-selections <- strsplit(opt$selection, "-")[[1]]
-# get condition names and all used group variables (they can change between the two conditions) first 
-all_group_vars <- c()
-conditions <- list()
-for (s in selections) {
-  split_string <- strsplit(s, ",")[[1]]
-  key <- split_string[1]
-  condition_name <- split_string[4]
-  conditions[[key]] <- c(conditions[[key]], condition_name)
-  all_group_vars <-c(all_group_vars, strsplit(split_string[3], ":")[[1]])
-}
+if (opt$mode == 'tsv') {
+  # get tools
+  tools <- list.dirs(path = file.path(opt$results.path, opt$selection), full.names = FALSE, recursive = FALSE)
+  tool_names <- paste(tools, collapse = ",")
 
-# parsing the selection
-for (s in selections) {
-  split_string <- strsplit(s, ",")[[1]]
-  key <- split_string[1]
-  assay <- split_string[2]
-  group_var <- split_string[3]
-  split_group_var <- strsplit(group_var, ":")[[1]]
-  # indicates which group_vars are used in each selection of the comparison
-  group_var_idx <- paste(match(split_group_var, all_group_vars), collapse=":")
-
-  # if no filter was used, add NA values.
-  filter <- NA
-  filter_val <- NA
-  # if the filter is set, the selection string was modified (by the pipeline) to have filter as last keyword
-  if (split_string[length(split_string)] == "filter") {
-    group_vals <- split_string[5:(length(split_string) - 3)]
-
-    filter <- split_string[length(split_string) - 2]
-    filter_val <- split_string[length(split_string) - 1]
-  } else {
-    group_vals <- split_string[5:(length(split_string) - 2)]
-  }
-  # parsing all information. "," separates the different values (key, assay, group_var, ...). 
-  group_vals <- paste(group_vals, collapse=",")
-  all_files <- list.files(path = file.path(opt$results.path, key), full.names = TRUE, recursive = TRUE)
+  # get network files
+  all_files <- list.files(path = file.path(opt$results.path, opt$selection), full.names = TRUE, recursive = TRUE)
   network_files <- c(grep("aggregated_filtered_network", all_files, value = TRUE))
   network_files <- paste(network_files, collapse = ",")
 
-  tools <- list.dirs(path = file.path(opt$results.path, key), full.names = FALSE, recursive = FALSE)
-  tools <- paste(tools, collapse = ",")
+  # get condition names
+  files <- list.files(path = file.path(opt$results.path, opt$selection), full.names = FALSE, recursive = FALSE)
+  print(files)
+  cond_files <- c(grep('out_', files, value = TRUE))
+  cond_name1 <- gsub('out_', '', cond_files[1])
+  cond_name1 <- gsub('.tsv', '', cond_name1)
+  cond_name2 <- gsub('out_', '', cond_files[2])
+  cond_name2 <- gsub('.tsv', '', cond_name2)
+  cond_names <- paste(c(cond_name1, cond_name2), collapse = ",")
 
-  cond <- sort(paste(conditions[[key]], collapse = ","), decreasing = FALSE)
+  configuration <- rbind(configuration,
+    list(key = opt$selection, assay = 'RNA', group_var = NA, condition_names = cond_names, tools = tool_names, network_files = network_files))
+  print(configuration)
+} else {
 
-  config <- list(key = key, assay = assay, group_var = group_var, group_var_idx = group_var_idx, group_vals = group_vals, tools = tools, condition_names = cond, network_files = network_files, filter = filter, filter_val = filter_val)
-  configuration <- rbind(configuration, config)
-}
-
-# Postprocessing configuration data.table so that only 1 row exists per given comparison in the configuration file
-# For one column of a row: "-" separates between values of selections. ":" separates list values of one value type (e.g. multiple group_vars are separated by :). 
-configuration <- unique(configuration)
-duplicates <- configuration[duplicated(configuration$key),]
-# Must be because of differing group_vars ->
-if (nrow(duplicates) > 0) {
-  for (i in 1:nrow(duplicates)) {
-    dup_row <- configuration[i*2,]
-    orig_row <- configuration[(i*2) - 1, ]
-
-    configuration[(i*2) - 1, ]$group_vals <- paste(orig_row$group_vals, dup_row$group_vals, sep = "-")
-    # used to map the used group vars of the selection to the list of all used group vars.
-    configuration[(i*2) - 1, ]$group_var_idx <- paste(orig_row$group_var_idx, dup_row$group_var_idx, sep = "-")
-    configuration[(i*2) - 1, ]$group_var <- paste(orig_row$group_var, dup_row$group_var, sep=":")
+  # parse selection
+  selections <- strsplit(opt$selection, "-")[[1]]
+  # get condition names and all used group variables (they can change between the two conditions) first 
+  all_group_vars <- c()
+  conditions <- list()
+  for (s in selections) {
+    split_string <- strsplit(s, ",")[[1]]
+    key <- split_string[1]
+    condition_name <- split_string[4]
+    conditions[[key]] <- c(conditions[[key]], condition_name)
+    all_group_vars <-c(all_group_vars, strsplit(split_string[3], ":")[[1]])
   }
-  # removing duplicate rows has to be done after merging the group_vars
-  configuration <- configuration[-sapply(1:nrow(duplicates), function(x) {x * 2}),]
-}
-########### Loading Seurat object, filtering the correct cells and performing differential testing
-if (opt$mode != "tsv") {
+
+  # parsing the selection
+  for (s in selections) {
+    print(s)
+    split_string <- strsplit(s, ",")[[1]]
+    key <- split_string[1]
+    assay <- split_string[2]
+    group_var <- split_string[3]
+    split_group_var <- strsplit(group_var, ":")[[1]]
+    # indicates which group_vars are used in each selection of the comparison
+    group_var_idx <- paste(match(split_group_var, all_group_vars), collapse=":")
+    group_vals <- split_string[5:(length(split_string))]
+    
+    # parsing all information. "," separates the different values (key, assay, group_var, ...). 
+    group_vals <- paste(group_vals, collapse=",")
+    all_files <- list.files(path = file.path(opt$results.path, key), full.names = TRUE, recursive = TRUE)
+    network_files <- c(grep("aggregated_filtered_network", all_files, value = TRUE))
+    network_files <- paste(network_files, collapse = ",")
+
+    tools <- list.dirs(path = file.path(opt$results.path, key), full.names = FALSE, recursive = FALSE)
+    tools <- paste(tools, collapse = ",")
+
+    cond <- sort(paste(conditions[[key]], collapse = ","), decreasing = FALSE)
+
+    config <- list(key = key, assay = assay, group_var = group_var, group_var_idx = group_var_idx, group_vals = group_vals, tools = tools, condition_names = cond, network_files = network_files)
+    configuration <- rbind(configuration, config)
+  }
+
+  # Postprocessing configuration data.table so that only 1 row exists per given comparison in the configuration file
+  # For one column of a row: "-" separates between values of selections. ":" separates list values of one value type (e.g. multiple group_vars are separated by :). 
+  configuration <- unique(configuration)
+  duplicates <- configuration[duplicated(configuration$key),]
+  # Must be because of differing group_vars ->
+  if (nrow(duplicates) > 0) {
+    for (i in 1:nrow(duplicates)) {
+      dup_row <- configuration[i*2,]
+      orig_row <- configuration[(i*2) - 1, ]
+
+      configuration[(i*2) - 1, ]$group_vals <- paste(orig_row$group_vals, dup_row$group_vals, sep = "-")
+      # used to map the used group vars of the selection to the list of all used group vars.
+      configuration[(i*2) - 1, ]$group_var_idx <- paste(orig_row$group_var_idx, dup_row$group_var_idx, sep = "-")
+      configuration[(i*2) - 1, ]$group_var <- paste(orig_row$group_var, dup_row$group_var, sep=":")
+    }
+    # removing duplicate rows has to be done after merging the group_vars
+    configuration <- configuration[-sapply(1:nrow(duplicates), function(x) {x * 2}),]
+  }
+  ########### Loading Seurat object, filtering the correct cells and performing differential testing
   adata <- readRDS(opt$seurat.file)
   # adata <- adata$all
   group.var<-unique(strsplit(configuration[1]$group_var, ':')[[1]])
   Idents(adata)<-group.var
+  
+  # get all factors and columns that were used in the selection but were not of class factor
+  factors <- unique(c(names(which(sapply(adata@meta.data, class)=='factor')), unlist(strsplit(configuration$group_var, ':')[[1]])))
+  # get all unique values for the factors
+  factor_vals <- sapply(factors, function(factor) { unique(unlist(adata@meta.data[, factor], recursive = FALSE)) })
+  # remove the levels from the entries that are factors
+  factor_vals <- sapply(factor_vals, function(x) { if(class(x) == 'factor') { droplevels(x) } else { x }})
+  # add name of factor as key to the values (needed for identification inside of shiny)
+  factor_vals <- sapply(names(factor_vals), function(name) { paste0(rep(name, length(factor_vals[[name]])), ': ', factor_vals[[name]])})
 }
+
 # Creating the UI of the Seurat object
 ui <- 
   navbarPage(
@@ -240,8 +264,10 @@ ui <-
               checkboxInput(inputId = "comparison_grn_switch_edges", label = "Compare edges to uploaded file", value = FALSE)
             ),
             column(3,
-              uiOutput("select_conditions"),
-              uiOutput("select_filter_vals"),
+              textInput('comp_name_cond1', 'Name the first comparison condition', value = "Comparison condition 1", width = NULL, placeholder = NULL),
+              uiOutput("comp_selec_cond1"),
+              textInput('comp_name_cond2', 'Name the second comparison condition', value = "Comparison condition 2", width = NULL, placeholder = NULL),
+              uiOutput("comp_selec_cond2"),
               uiOutput("compare_button"),
             ),
           ),
@@ -270,67 +296,74 @@ ui <-
       ),
     ),
     ### Second Tab (View Seurat object information) ### 
-    tabPanel(
-      "Gene Expression", 
-      h2("Gene Expression"),
-        sidebarLayout(
-          sidebarPanel(
-            selectInput(
-              'select_genes',
-              'Select Genes to display',
-              rownames(adata),
-              selected = NULL,
-              multiple = TRUE,
-              selectize = TRUE,
-              width = NULL,
-              size = NULL
-            ),
-            selectInput(
-              'select_primary_grouping',
-              'Select primary grouping variable',
-              colnames(adata@meta.data),
-              selected = adata@meta.data[1],
-              multiple = FALSE,
-              selectize = TRUE,
-              width = NULL,
-              size = NULL
-            ),
-            selectInput(
-              'select_secondary_grouping',
-              'Select secondary grouping variable',
-              colnames(adata@meta.data),
-              selected = adata@meta.data[1],
-              multiple = FALSE,
-              selectize = TRUE,
-              width = NULL,
-              size = NULL
-            )
-          ),
-          mainPanel(
-            tabsetPanel(
-              type = 'tabs',
-              tabPanel(
-                'Umap',
-                fluidRow(12, 
-                  column(12, plotOutput("umap_plot")), 
-                  column(12, plotOutput('standard_violin_plot'))
-                )
-              ),
-              tabPanel('Dotplot',
-                fluidRow(12, 
-                  column(12, plotOutput("dot_plot"))
-                )
-              )      
-            )
-          )
-        )
-    )
+    # tabPanel(
+    #   "Gene Expression", 
+    #   h2("Gene Expression"),
+    #     sidebarLayout(
+    #       uiOutput('secondTab_sidepanel'),
+    #       mainPanel(
+    #         tabsetPanel(
+    #           type = 'tabs',
+    #           tabPanel(
+    #             'Umap',
+    #             fluidRow(12, 
+    #               column(12, plotOutput("umap_plot")), 
+    #               column(12, plotOutput('standard_violin_plot'))
+    #             )
+    #           ),
+    #           tabPanel('Dotplot',
+    #             fluidRow(12, 
+    #               column(12, plotOutput("dot_plot"))
+    #             )
+    #           )      
+    #         )
+    #       )
+    #     )
+    # )
   )
 
 # Backend of the shiny app
 server <- function(input, output, session) {
   # Needed to show helper buttons in the shiny app
   observe_helpers(withMathJax = TRUE)
+
+  # output$secondTab_sidepanel <- renderUI({
+  #   if (opt$mode == 'tsv') {
+  #     return(NULL)
+  #   }
+  #   sidebarPanel(
+  #     selectInput(
+  #       'select_genes',
+  #       'Select Genes to display',
+  #       rownames(adata),
+  #       selected = NULL,
+  #       multiple = TRUE,
+  #       selectize = TRUE,
+  #       width = NULL,
+  #       size = NULL
+  #     ),
+  #     selectInput(
+  #       'select_primary_grouping',
+  #       'Select primary grouping variable',
+  #       colnames(adata@meta.data),
+  #       selected = adata@meta.data[1],
+  #       multiple = FALSE,
+  #       selectize = TRUE,
+  #       width = NULL,
+  #       size = NULL
+  #     ),
+  #     selectInput(
+  #       'select_secondary_grouping',
+  #       'Select secondary grouping variable',
+  #       colnames(adata@meta.data),
+  #       selected = adata@meta.data[1],
+  #       multiple = FALSE,
+  #       selectize = TRUE,
+  #       width = NULL,
+  #       size = NULL
+  #     )
+  #   )
+  # })
 
   # The forcenetwork needs to be a reactive value to change the node/link values
   output$mode <- renderText({
@@ -339,7 +372,7 @@ server <- function(input, output, session) {
 
   # UI of the comparison button/plots. This is only shown if there is something to compare to. For this reason, it has to be coded on the server side.
   output$compare_button <- renderUI({
-    if(opt$mode == "tsv" | is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
+    if(opt$mode == "tsv") {
       return(NULL)
     }
     helper(
@@ -358,11 +391,11 @@ server <- function(input, output, session) {
     )
   })
 
+
   output$comparison_plots <- renderUI({
-    if(opt$mode == "tsv" | is.na(configuration[configuration$key == input$Key_pick,]$filter)){
+    if(opt$mode == "tsv"){
       return(NULL)
     }
-
     fluidRow(
       column(6, 
         plotOutput("comparison_violin_plot"),
@@ -388,11 +421,19 @@ server <- function(input, output, session) {
   # cond2_metacells_data: Metacell data of differential condition 2 (preloaded when selecting a key to save computation time)
   # metacells_maxVal:     Maximum value of the metacell data. Used to keep a consistent range of the axis for the violin plot. The linear model plots do NOT have the same range because of visibility.
 
-  displayed_network <- reactiveValues(
-    diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
-    fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = adata, 
-    cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_maxVal = 0
-  )
+  if (opt$mode == 'tsv') {
+    displayed_network <- reactiveValues(
+      diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
+      fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = NULL, 
+      cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_maxVal = 0
+    )
+  } else {
+    displayed_network <- reactiveValues(
+      diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
+      fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = adata, 
+      cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_maxVal = 0
+    )
+  }
 
   # creates the displayed network using network3D. For more information see https://christophergandrud.github.io/networkD3/
   create_network <- function() {
@@ -441,6 +482,7 @@ server <- function(input, output, session) {
   
   ## Observer event for selecting the input key. Each row in the configuration data.frame (computed at the top) is identified by ONE UNIQUE key (if the config file does not use the same keys twice. If so, the behaviour is undefined)
   observeEvent(input$Key_pick, {
+  
     # getting all network files of the correct row
     network.file <- strsplit(configuration[configuration$key == input$Key_pick,]$network_files, ",")[[1]][1]
     # trying to load the data of the first network file. If no edges were found using the selected approach (mainly happens with z_scores), nothing will be done.
@@ -454,30 +496,78 @@ server <- function(input, output, session) {
         displayed_network$diffGRN_network_data <- displayed_network$network_data
         displayed_network$diffConditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
 
-        # creating a column "group" in the adata object to match the conditions to the cells
-        group_var.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var, ":")[[1]]
-        group_vals.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_vals, "-")[[1]]
-        group_idx.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var_idx, "-")[[1]]
+        if (opt$mode != 'tsv') {
+          # creating a column "group" in the adata object to match the conditions to the cells
+          group_var.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var, ":")[[1]]
+          group_vals.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_vals, "-")[[1]]
+          group_idx.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var_idx, "-")[[1]]
 
-        displayed_network$adata$group <- "NA"
-        for (i in 1:length(group_idx.all)) {
-          group_idx <- as.numeric(strsplit(group_idx.all[i], ":")[[1]])
-          group_var <- group_var.all[c(group_idx)]
-          group_val.selection <- strsplit(group_vals.all[i], ",")[[1]]
-          filter_vector <- nrow(adata)
-          idx <- 1
-          for (col_name in group_var) {
-            col_values <- adata@meta.data[, col_name]
-            group_val <- strsplit(group_val.selection, ":")[[1]][idx]
-            filter_vector <- filter_vector & (col_values == group_val)
-            idx <- idx + 1
+          # calculate grouping column for the current selected key
+          displayed_network$adata$ShinyGroup <- "NA"
+          displayed_network$adata$ShinyComparison <- "NA"
+          comp_selec1 <- list()
+          comp_selec2 <- list()
+          for (i in 1:length(group_idx.all)) {
+            group_idx <- as.numeric(strsplit(group_idx.all[i], ":")[[1]])
+            group_var <- group_var.all[c(group_idx)]
+            group_val.selection <- strsplit(group_vals.all[i], ",")[[1]]
+            filter_vector <- nrow(adata)
+            idx <- 1
+            for (col_name in group_var) {
+              
+              col_values <- displayed_network$adata@meta.data[, col_name]
+              group_val <- unique(unlist(lapply(strsplit(group_val.selection, ':'), `[[`, idx)))
+              if (i == 1) {
+                comp_selec1[[col_name]] <- group_val
+              } else {
+                comp_selec2[[col_name]] <- group_val
+              }
+              group_val <- type.convert(group_val, as.is = TRUE)
+              if (length(group_val) == 1) { 
+                filter_vector <- filter_vector & (col_values == group_val)
+              } else {
+                filter_vector <- filter_vector & (col_values %in% group_val)
+              }
+              idx <- idx + 1
+            }
+            displayed_network$adata$ShinyGroup[filter_vector] <- gsub(pattern = '_', replacement = ' ', displayed_network$diffConditions[i])        
+            # set the identifications for the comparison selections
+            if (i == 1) {
+              comp_selec1 <- unlist(sapply(names(comp_selec1), function(name) { paste0(rep(name, length(comp_selec1[[name]])), ': ', comp_selec1[[name]])}))
+            } else {
+              comp_selec2 <- unlist(sapply(names(comp_selec2), function(name) { paste0(rep(name, length(comp_selec2[[name]])), ': ', comp_selec2[[name]])}))
+            }
+            if (i == 1) {
+              output$comp_selec_cond1 <- renderUI({
+                virtualSelectInput(
+                  'comp_selec_cond1',
+                  label = "Choose different factors for the first condition for comparison:",
+                  choices = factor_vals,
+                  selected = comp_selec1,
+                  multiple = TRUE,
+                  width = NULL,
+                  size = NULL
+                )
+              }) 
+            } else {
+              output$comp_selec_cond2 <- renderUI({
+                virtualSelectInput(
+                  'comp_selec_cond2',
+                  label = "Choose different factors for the second condition for comparison:",
+                  choices = factor_vals,
+                  selected = comp_selec2,
+                  multiple = TRUE,
+                  width = NULL,
+                  size = NULL
+                )
+              })
+            }
           }
-          displayed_network$adata$group[filter_vector] <- gsub(pattern = '_', replacement = ' ', displayed_network$diffConditions[i])        
         }
       } else { # WIP: Fix grn only mode
         displayed_network$GRN_network_data <- displayed_network$network_data
       }
-      
+
       # render text for the network legend according to the condition names of the selected network
       output$condition1_activator <- renderText({
         paste("Stronger in ", gsub(displayed_network$diffConditions[1], pattern="_", replacement=" "), " (Activator)")
@@ -492,38 +582,6 @@ server <- function(input, output, session) {
         paste("Stronger in ", gsub(displayed_network$diffConditions[2], pattern="_", replacement=" "), " (Repressor)")
       })
       
-      # render UI of the filter selections.
-      output$select_conditions <- renderUI({
-        if(opt$mode == "tsv" || is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
-          return(NULL)
-        } else {
-          selectInput(
-            "filter_key_pick",
-            label = "Choose a key to compare to.",
-            choices = configuration$key, 
-            multiple = FALSE,
-            width = NULL,
-            size = NULL
-          )
-        }
-      })
-      output$select_filter_vals <- renderUI({
-        if(opt$mode == "tsv" || is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
-          return(NULL)
-        } else {
-          selectInput(
-            'filter_value',
-            label = "Choose Clusters for comparison:",
-            choices = unique(adata[[configuration[configuration$key == input$Key_pick,]$filter]]),
-            selected = NULL,
-            multiple = TRUE,
-            selectize = TRUE,
-            width = NULL,
-            size = NULL
-          )
-        }
-      })
-
       updateTextInput(session, "DiffGRN_pick", value=opt$dgrntools[1])
       updateTextInput(session, "GRN_pick", value=opt$grntools[1])
 
@@ -767,23 +825,17 @@ server <- function(input, output, session) {
 
 # Violin and linear model plot for the shown DiffGRN
   output$violin_plot <- renderPlot({
-    if (is.null(input$id_node)) {
+    if (is.null(input$id_node) || opt$mode == 'tsv') {
       return(NULL)
-    }
-    Idents(displayed_network$adata) <- 'group'
-    # asub <- 
-    filter_name <- configuration[configuration$key == input$Key_pick,]$filter
-    if (!is.na(filter_name)) {
-      filter_val <- strsplit(configuration[configuration$key == input$Key_pick,]$filter_val, ":")[[1]]
-      asub <- displayed_network$adata[, displayed_network$adata@meta.data[[filter_name]] %in% filter_val]
-    } else {
-      asub <- displayed_network$adata
     }
     condition_names <- sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
     cols <- colors[c(1,2)]
     names(cols) <- condition_names
-    adata_gene_name <- rownames(asub)[which(toupper(rownames(asub)) == input$id_node)]
-    plot <- VlnPlot(asub, features = adata_gene_name, idents = condition_names, cols = cols, y.max=displayed_network$metacells_maxVal)
+    gene_names <- toupper(rownames(displayed_network$adata))
+    input_gene_name <- rownames(displayed_network$adata)[grep(paste0('^',input$id_node,'$'), gene_names)]
+    selected_cells <- WhichCells(adata, )
+    asub <- subset(displayed_network$adata, subset = ShinyGroup != 'NA')
+    plot <- VlnPlot(asub, features = input_gene_name, group.by = 'ShinyGroup', cols = cols, y.max=displayed_network$metacells_maxVal)
     output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
   })
@@ -804,122 +856,91 @@ server <- function(input, output, session) {
     res[[1]]
   })
   
+  get_comp_selections <- function(comp_selec1, comp_selec2) {
+    
+    col_idx <- 1
+    col_names <- unique(lapply(strsplit(comp_selec1, ':'), function(x) { x[1] }))
+    comp1_select.cells <- c()
+    cells <- c()
+    for (selection in comp_selec1) {
+      s <- strsplit(selection, ':')[[1]]
+      col <- s[1]
+      if (col != col_names[col_idx]) {
+        if (length(comp1_select.cells) == 0) {
+          comp1_select.cells <- cells
+        } else {
+          comp1_select.cells <- intersect(comp1_select.cells, cells)
+        }
+        cells <- c()
+        col_idx <- col_idx + 1
+      }
+      val <- str_sub(s[2], 2) # removing the whitespace that is there for good looks :)
+      cells <- c(cells, which(adata@meta.data[, col] == val))
+    }
+    comp1_select.cells <- intersect(comp1_select.cells, cells)
+
+    col_idx <- 1
+    col_names <- unique(lapply(strsplit(comp_selec2, ':'), function(x) { x[1] }))
+    comp2_select.cells <- c()
+    cells <- c()
+    for (selection in comp_selec2) {
+      s <- strsplit(selection, ':')[[1]]
+      col <- s[1]
+      if (col != col_names[col_idx]) {
+        if (length(comp2_select.cells) == 0) {
+          comp2_select.cells <- cells
+        } else {
+          comp2_select.cells <- intersect(comp2_select.cells, cells)
+        }
+        cells <- c()
+        col_idx <- col_idx + 1
+      }
+      val <- str_sub(s[2], 2) # removing the whitespace that is there for good looks :)
+      cells <- c(cells, which(adata@meta.data[, col] == val))
+    }
+    comp2_select.cells <- intersect(comp2_select.cells, cells)
+
+    return(list(comp1_select.cells = comp1_select.cells, comp2_select.cells = comp2_select.cells))
+  }
 
   # Comparison violin and linear model plots if a filter was set
   comparison_violin_plot <- eventReactive(input$compare_button, {
     # Can only make comparison plots if the input file type was a Seurat or Scanpy object
-    if(opt$mode == "tsv" || is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
+    if(opt$mode == "tsv" || is.null(input$id_node)) {
       return(NULL)
-    }
-    if (is.null(input$id_node) || 
-        is.null(input$filter_key_pick) || 
-        is.null(input$filter_value)
-    ) { # only plot if all three values are set and atleast 2 cases are selected
-      return(NULL)
-    }
-    
-    filter_name <- configuration[configuration$key == input$Key_pick,]$filter
-    picked_filter_key <- configuration[configuration$key == input$filter_key_pick,]$filter
-    if (filter_name != picked_filter_key) {
-      showNotification(paste0("Selected filter key has not the same set filter in the configuration file. Therefore, these conditions cannot be compared!"), type = "error")
-      return(NULL)
-    }
-    # computing a "comparison" column in the Seurat object to mark the correct cells of the selected comparison key
-    filter_val <- input$filter_value
-    group_var.all <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_var, ":")[[1]]
-    group_vals.all <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_vals, "-")[[1]]
-    group_idx.all <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_var_idx, "-")[[1]]
-    condition_names <- strsplit(configuration[configuration$key == input$filter_key_pick,]$condition_names, ",")[[1]]
-    condition_names <- sapply(condition_names, function(x) gsub(pattern = '_', replacement = ' ', x))
-    adata$comparison <- "NA"
-    for (i in 1:length(group_idx.all)) {
-      group_idx <- as.numeric(strsplit(group_idx.all[i], ":")[[1]])
-      group_var <- group_var.all[c(group_idx)]
-      group_val.selection <- strsplit(group_vals.all[i], ",")[[1]]
-      filter_vector <- nrow(adata)
-      idx <- 1
-      for (col_name in group_var) {
-        col_values <- adata@meta.data[, col_name]
-        group_val <- strsplit(group_val.selection, ":")[[1]][idx]
-        filter_vector <- filter_vector & (col_values == group_val)
-        idx <- idx + 1
-      }
-      adata$comparison[filter_vector] <- condition_names[i]        
     }
 
-    Idents(adata) <- 'comparison'
-    asub <- subset(adata, cells = which(adata@meta.data[, filter_name] %in% as.numeric(filter_val)))
-    adata_gene_name <- rownames(asub)[which(toupper(rownames(asub)) == input$id_node)]
-    plot <- try(VlnPlot(asub, features = adata_gene_name, idents = condition_names, cols = colors, y.max=displayed_network$metacells_maxVal), silent=TRUE)
+    cond_name1 <- input$comp_name_cond1
+    cond_name2 <- input$comp_name_cond2  
+    condition_names <- c(cond_name1, cond_name2)
+    comp_selec1 <- input$comp_selec_cond1
+    comp_selec2 <- input$comp_selec_cond2
+    if (length(comp_selec1) == 0 || length(comp_selec2) == 0) {
+      return(NULL)
+    }    
+    
+    comp_select.cells <- get_comp_selections(comp_selec1, comp_selec2)
+    comp1_select.cells <- comp_select.cells$comp1_select.cells
+    comp2_select.cells <- comp_select.cells$comp2_select.cells
+    
+    displayed_network$adata$ShinyComparison[comp1_select.cells] <- cond_name1
+    displayed_network$adata$ShinyComparison[comp2_select.cells] <- cond_name2
+    gene_names <- toupper(rownames(adata))
+    input_gene_name <- rownames(adata)[grep(paste0('^',input$id_node,'$'), gene_names)]
+    cols <- colors[c(1,2)]
+    names(cols) <- condition_names
+    asub <- subset(displayed_network$adata, subset = ShinyComparison != 'NA')
+    plot <- VlnPlot(asub, features = input_gene_name, group.by = 'ShinyComparison', cols = cols, y.max=displayed_network$metacells_maxVal)
     output$downloadComparisonViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
   })
 
   output$comparison_violin_plot <- renderPlot({comparison_violin_plot()})
   
-  comparison_linear_model_plot <- eventReactive(input$compare_button, {
-    if(opt$mode == "tsv" || is.na(configuration[configuration$key == input$Key_pick,]$filter)) {
-      return(NULL)
-    }
-    if (is.null(input$id_source) || 
-        is.null(input$filter_key_pick) || 
-        is.null(input$filter_value)
-    ) { # only plot if all three values are set
-      return(NULL)
-    }
-
-
-    filter_name <- configuration[configuration$key == input$Key_pick,]$filter
-    picked_filter_key <- configuration[configuration$key == input$filter_key_pick,]$filter
-    if (filter_name != picked_filter_key) {
-      showNotification(paste0("Selected filter key has not the same set filter in the configuration file. Therefore, these conditions cannot be compared!"), type = "error")
-      return(NULL)
-    }
-    filter_val <- input$filter_value
-    group_var.all <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_var, ":")[[1]]
-    selection <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_vals, "-")[[1]]
-    group_idx.all <- strsplit(configuration[configuration$key == input$filter_key_pick,]$group_var_idx, "-")[[1]]
-    condition_names <- strsplit(configuration[configuration$key == input$filter_key_pick,]$condition_names, ",")[[1]]
-    condition_names <- sapply(condition_names, function(x) gsub(pattern = '_', replacement = ' ', x))
-    assay <- configuration[configuration$key == input$filter_key_pick,]$assay
-    
-    # TODO: pass values that were also used in the meta cell creation to this function so that they are the same.
-    n.samples <- 100 
-    p.missing <- 10            
-
-    # Computing the metacells
-    cond1_data <- NULL
-    cond2_data <- NULL
-    idx <- 1
-    for (i in seq_len(length(selection))) {
-      s <- selection[i]
-      s <- strsplit(s, ',')[[1]]
-      s <- lapply(s, function(x) strsplit(x, ":")[[1]])
-
-      group_idx <- as.numeric(strsplit(group_idx.all[idx], ":")[[1]])
-      group_var <- group_var.all[c(group_idx)]
-      idx <- idx + 1 
-
-      meta.cell.dfs<-list()
-      meta.cell.df<-NULL
-      select.cells.all <- c()
-      for (g in 1:length(s)){
-        select.cells<-list()
-        # first criterion
-        select.cells <- which(adata@meta.data[, group_var[1]]==s[[g]][1])
-
-        # select metadata categories
-        if (length(group_var) > 1) {
-          for (j in 2:length(group_var)){
-            select.cells<-intersect(select.cells, which(adata@meta.data[, group_var[j]]==s[[g]][j]))
-          }
-        }
-        select.cells<-intersect(select.cells, which(adata@meta.data[, filter_name] %in% as.numeric(filter_val)))
-        select.cells.all <- c(select.cells.all, unlist(select.cells))
-      }
-      select.cells.all <- unique(select.cells.all)
-      subset<-subset(adata, cells = select.cells.all)        
-      # Find number of barcodes in object
+  meta_cell_creation <- function(subset) {
+      n.samples <- 100 
+      p.missing <- 10  
+      print(subset)
       n.cells<-nrow(subset@meta.data)
       # Compute number of cells to aggregate
       cells.p.metasample<-nrow(subset@meta.data)/n.samples
@@ -929,44 +950,57 @@ server <- function(input, output, session) {
       # Set the ident to the newly created meta.cell variable
       Idents(subset)<-"meta.cell"
       # Aggregate the expression
-      agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
-      agg@assays[[opt$assay]]@counts <-agg@assays[[opt$assay]]@counts / cells.p.metasample
-      agg <- NormalizeData(object = agg, assay = opt$assay)
+      print(configuration[configuration$key == input$Key_pick]$assay)
+      agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = configuration[configuration$key == input$Key_pick]$assay)
+      agg@assays[[configuration[configuration$key == input$Key_pick]$assay]]@counts <-agg@assays[[configuration[configuration$key == input$Key_pick]$assay]]@counts / cells.p.metasample
+      agg <- NormalizeData(object = agg, assay = configuration[configuration$key == input$Key_pick]$assay)
       # export the results
-
-      result.data.frame <- agg@assays[[opt$assay]]@data
+      result.data.frame <- agg@assays[[configuration[configuration$key == input$Key_pick]$assay]]@data
       row.names<-rownames(result.data.frame)
-      column.names<-paste0(paste0(s[[g]], collapse='_'), '_', colnames(result.data.frame))
+      column.names<-paste0(paste0(input$Key_pick, collapse='_'), '_', colnames(result.data.frame))
       result.data.frame<-as.data.table(result.data.frame)
       result.data.frame<-cbind(row.names, result.data.frame)
       colnames(result.data.frame)<-c('Gene', column.names)
-      if(is.null(meta.cell.df)){
-        meta.cell.df<-result.data.frame
-      }
-      else{
-        meta.cell.df<-merge(meta.cell.df, result.data.frame, by = 'Gene')
-      }
-      select<-which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(p.missing/100))
-      meta.cell.df<-meta.cell.df[select, ]
-      meta.cell.df$Gene <- toupper(meta.cell.df$Gene)
-      if(is.null(cond1_data)) {
-        cond1_data <- meta.cell.df     
-      } else {
-        cond2_data <- meta.cell.df
-      }
-    }
-    
-    gene_names <- intersect(cond1_data$Gene, cond2_data$Gene)
-    cond1_data <- cond1_data[Gene %in% gene_names]
-    cond2_data <- cond2_data[Gene %in% gene_names]      
+      select<-which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(p.missing/100))
+      
+      result.data.frame<-result.data.frame[select, ]
+      result.data.frame$Gene <- toupper(result.data.frame$Gene)
+      return(result.data.frame)
+  }
 
-    expr1_x <- as.numeric(cond1_data[Gene == toupper(isolate(input$id_source)), -1])
-    expr1_y <- as.numeric(cond1_data[Gene == toupper(isolate(input$id_target)), -1])    
-    expr2_x <- as.numeric(cond2_data[Gene == toupper(isolate(input$id_source)), -1])    
-    expr2_y <- as.numeric(cond2_data[Gene == toupper(isolate(input$id_target)), -1])
+  comparison_linear_model_plot <- eventReactive(input$compare_button, {
+    if(opt$mode == "tsv") {
+      return(NULL)
+    }
+    comp_selec1 <- input$comp_selec_cond1
+    comp_selec2 <- input$comp_selec_cond2
+    cond_name1 <- input$comp_name_cond1
+    cond_name2 <- input$comp_name_cond2   
+    conditition_names <- c(cond_name1, cond_name2)
+
+    comp_select.cells <- get_comp_selections(comp_selec1, comp_selec2)
+    comp1_select.cells <- comp_select.cells[[1]]
+    comp2_select.cells <- comp_select.cells[[2]]
+
+    comp1_subset <- subset(adata, cells = comp1_select.cells)
+    comp2_subset <- subset(adata, cells = comp2_select.cells) 
+
+    comp1_meta_cell_df <- meta_cell_creation(comp1_subset)
+    comp2_meta_cell_df <- meta_cell_creation(comp2_subset)
+
+    gene_names <- intersect(comp1_meta_cell_df$Gene, comp2_meta_cell_df$Gene)
+    comp1_meta_cell_df <- comp1_meta_cell_df[Gene %in% gene_names]
+    comp2_meta_cell_df <- comp2_meta_cell_df[Gene %in% gene_names]      
+    
+    comp1_meta_cell_df$Gene <- toupper(comp1_meta_cell_df$Gene)
+    comp2_meta_cell_df$Gene <- toupper(comp2_meta_cell_df$Gene)
+
+    expr1_x <- as.numeric(comp1_meta_cell_df[Gene == toupper(isolate(input$id_source)), -1])
+    expr1_y <- as.numeric(comp1_meta_cell_df[Gene == toupper(isolate(input$id_target)), -1])    
+    expr2_x <- as.numeric(comp2_meta_cell_df[Gene == toupper(isolate(input$id_source)), -1])    
+    expr2_y <- as.numeric(comp2_meta_cell_df[Gene == toupper(isolate(input$id_target)), -1])
     
     # outlier detection
-     
     res <- plot_linear_model(expr1_x, expr1_y, expr2_x, expr2_y)
     output$downloadGRNLinearModelPlot <- download_plot(res[[1]], res[[2]])
 
@@ -989,33 +1023,33 @@ server <- function(input, output, session) {
   }
 
   ########################## SECOND TAB (Seurat object information) ################################
-  output$umap_plot<-renderPlot({
-    FeaturePlot(adata, features = input$select_genes, ncol=6)
-  })
+  # output$umap_plot<-renderPlot({
+  #   FeaturePlot(adata, features = input$select_genes, ncol=6)
+  # })
   
-  output$standard_violin_plot<-renderPlot({
-    # Seurat's VlnPlot does not show the legend if more than one gene is plotted (see https://github.com/satijalab/seurat/issues/2598) -> using cowplot's plot_grid with list of violin plots
-    plots <- VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6, combine=FALSE)
-    do.call(plot_grid, plots)
-    # VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6)
-  })
+  # output$standard_violin_plot<-renderPlot({
+  #   # Seurat's VlnPlot does not show the legend if more than one gene is plotted (see https://github.com/satijalab/seurat/issues/2598) -> using cowplot's plot_grid with list of violin plots
+  #   plots <- VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6, combine=FALSE)
+  #   do.call(plot_grid, plots)
+  #   # VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6)
+  # })
   
-  output$dot_plot<-renderPlot({
-    DotPlot(adata, features = input$select_genes, group.by = input$select_primary_grouping)
-  })
+  # output$dot_plot<-renderPlot({
+  #   DotPlot(adata, features = input$select_genes, group.by = input$select_primary_grouping)
+  # })
   
-  observe({
-    x = input$id_node
-    edit <- isolate(input$select_genes)
-    if (length(edit)<12){
-      selection<-c(edit, x)
-    }else{
-      selection<-edit
-    }
-    updateSelectInput(session,'select_genes',
-                      choices = rownames(adata),
-                      selected = selection)
-  })
+  # observe({
+  #   x = input$id_node
+  #   edit <- toupper(isolate(input$select_genes))
+  #   if (length(edit)<12){
+  #     selection<-c(edit, x)
+  #   }else{
+  #     selection<-edit
+  #   }
+  #   updateSelectInput(session,'select_genes',
+  #                     choices = toupper(rownames(adata)),
+  #                     selected = selection)
+  # })
   ##########################
 }
 
