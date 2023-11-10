@@ -144,6 +144,9 @@ if (opt$mode == 'tsv') {
   }
   ########### Loading Seurat object, filtering the correct cells and performing differential testing
   adata <- readRDS(opt$seurat.file)
+  # saves a bit of computation time
+  gene_names <- rownames(adata)
+  capitilized_gene_names <- toupper(gene_names)
   # adata <- adata$all
   group.var<-unique(strsplit(configuration[1]$group_var, ':')[[1]])
   Idents(adata)<-group.var
@@ -296,30 +299,30 @@ ui <-
       ),
     ),
     ### Second Tab (View Seurat object information) ### 
-    # tabPanel(
-    #   "Gene Expression", 
-    #   h2("Gene Expression"),
-    #     sidebarLayout(
-    #       uiOutput('secondTab_sidepanel'),
-    #       mainPanel(
-    #         tabsetPanel(
-    #           type = 'tabs',
-    #           tabPanel(
-    #             'Umap',
-    #             fluidRow(12, 
-    #               column(12, plotOutput("umap_plot")), 
-    #               column(12, plotOutput('standard_violin_plot'))
-    #             )
-    #           ),
-    #           tabPanel('Dotplot',
-    #             fluidRow(12, 
-    #               column(12, plotOutput("dot_plot"))
-    #             )
-    #           )      
-    #         )
-    #       )
-    #     )
-    # )
+    tabPanel(
+      "Gene Expression", 
+      h2("Gene Expression"),
+        sidebarLayout(
+          uiOutput('secondTab_sidepanel'),
+          mainPanel(
+            tabsetPanel(
+              type = 'tabs',
+              tabPanel(
+                'Umap',
+                fluidRow(12, 
+                  column(12, plotOutput("umap_plot")), 
+                  column(12, plotOutput('standard_violin_plot'))
+                )
+              ),
+              tabPanel('Dotplot',
+                fluidRow(12, 
+                  column(12, plotOutput("dot_plot"))
+                )
+              )      
+            )
+          )
+        )
+    )
   )
 
 # Backend of the shiny app
@@ -327,43 +330,43 @@ server <- function(input, output, session) {
   # Needed to show helper buttons in the shiny app
   observe_helpers(withMathJax = TRUE)
 
-  # output$secondTab_sidepanel <- renderUI({
-  #   if (opt$mode == 'tsv') {
-  #     return(NULL)
-  #   }
-  #   sidebarPanel(
-  #     selectInput(
-  #       'select_genes',
-  #       'Select Genes to display',
-  #       rownames(adata),
-  #       selected = NULL,
-  #       multiple = TRUE,
-  #       selectize = TRUE,
-  #       width = NULL,
-  #       size = NULL
-  #     ),
-  #     selectInput(
-  #       'select_primary_grouping',
-  #       'Select primary grouping variable',
-  #       colnames(adata@meta.data),
-  #       selected = adata@meta.data[1],
-  #       multiple = FALSE,
-  #       selectize = TRUE,
-  #       width = NULL,
-  #       size = NULL
-  #     ),
-  #     selectInput(
-  #       'select_secondary_grouping',
-  #       'Select secondary grouping variable',
-  #       colnames(adata@meta.data),
-  #       selected = adata@meta.data[1],
-  #       multiple = FALSE,
-  #       selectize = TRUE,
-  #       width = NULL,
-  #       size = NULL
-  #     )
-  #   )
-  # })
+  output$secondTab_sidepanel <- renderUI({
+    if (opt$mode == 'tsv') {
+      return(NULL)
+    }
+    sidebarPanel(
+      selectInput(
+        'select_genes',
+        'Select Genes to display',
+        character(0),
+        multiple = TRUE,
+        selectize = TRUE,
+        width = NULL,
+        size = NULL
+      ),
+      selectInput(
+        'select_primary_grouping',
+        'Select primary grouping variable',
+        factors,
+        selected = factors[1],
+        multiple = FALSE,
+        selectize = TRUE,
+        width = NULL,
+        size = NULL
+      ),
+      selectInput(
+        'select_secondary_grouping',
+        'Select secondary grouping variable',
+        factors,
+        selected = factors[1],
+        multiple = FALSE,
+        selectize = TRUE,
+        width = NULL,
+        size = NULL
+      ),
+      actionButton('plot_button', 'Generate Plots')
+    )
+  })
 
   # The forcenetwork needs to be a reactive value to change the node/link values
   output$mode <- renderText({
@@ -831,9 +834,7 @@ server <- function(input, output, session) {
     condition_names <- sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
     cols <- colors[c(1,2)]
     names(cols) <- condition_names
-    gene_names <- toupper(rownames(displayed_network$adata))
-    input_gene_name <- rownames(displayed_network$adata)[grep(paste0('^',input$id_node,'$'), gene_names)]
-    selected_cells <- WhichCells(adata, )
+    input_gene_name <- gene_names[grep(paste0('^',input$id_node,'$'), capitilized_gene_names)]
     asub <- subset(displayed_network$adata, subset = ShinyGroup != 'NA')
     plot <- VlnPlot(asub, features = input_gene_name, group.by = 'ShinyGroup', cols = cols, y.max=displayed_network$metacells_maxVal)
     output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
@@ -925,8 +926,7 @@ server <- function(input, output, session) {
     
     displayed_network$adata$ShinyComparison[comp1_select.cells] <- cond_name1
     displayed_network$adata$ShinyComparison[comp2_select.cells] <- cond_name2
-    gene_names <- toupper(rownames(adata))
-    input_gene_name <- rownames(adata)[grep(paste0('^',input$id_node,'$'), gene_names)]
+    input_gene_name <- gene_names[grep(paste0('^',input$id_node,'$'), capitilized_gene_names)]
     cols <- colors[c(1,2)]
     names(cols) <- condition_names
     asub <- subset(displayed_network$adata, subset = ShinyComparison != 'NA')
@@ -988,9 +988,9 @@ server <- function(input, output, session) {
     comp1_meta_cell_df <- meta_cell_creation(comp1_subset)
     comp2_meta_cell_df <- meta_cell_creation(comp2_subset)
 
-    gene_names <- intersect(comp1_meta_cell_df$Gene, comp2_meta_cell_df$Gene)
-    comp1_meta_cell_df <- comp1_meta_cell_df[Gene %in% gene_names]
-    comp2_meta_cell_df <- comp2_meta_cell_df[Gene %in% gene_names]      
+    df_gene_names <- intersect(comp1_meta_cell_df$Gene, comp2_meta_cell_df$Gene)
+    comp1_meta_cell_df <- comp1_meta_cell_df[Gene %in% df_gene_names]
+    comp2_meta_cell_df <- comp2_meta_cell_df[Gene %in% df_gene_names]      
     
     comp1_meta_cell_df$Gene <- toupper(comp1_meta_cell_df$Gene)
     comp2_meta_cell_df$Gene <- toupper(comp2_meta_cell_df$Gene)
@@ -1023,33 +1023,36 @@ server <- function(input, output, session) {
   }
 
   ########################## SECOND TAB (Seurat object information) ################################
-  # output$umap_plot<-renderPlot({
-  #   FeaturePlot(adata, features = input$select_genes, ncol=6)
-  # })
+  umap_plot <- eventReactive(input$plot_button, { 
+    FeaturePlot(adata, features = input$select_genes, ncol=6)
+  })
+  output$umap_plot <- renderPlot({umap_plot()})
+
+  standard_violin_plot <- eventReactive(input$plot_button, {
+    # Seurat's VlnPlot does not show the legend if more than one gene is plotted (see https://github.com/satijalab/seurat/issues/2598) -> using cowplot's plot_grid with list of violin plots
+    plots <- VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6, combine=FALSE)
+    do.call(plot_grid, plots)
+    # VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6)
+  })  
+  output$standard_violin_plot <- renderPlot({standard_violin_plot()})
+
+  dot_plot <- eventReactive(input$plot_button, {
+    DotPlot(adata, features = input$select_genes, group.by = input$select_primary_grouping)
+  })
+  output$dot_plot <- renderPlot({dot_plot()})
   
-  # output$standard_violin_plot<-renderPlot({
-  #   # Seurat's VlnPlot does not show the legend if more than one gene is plotted (see https://github.com/satijalab/seurat/issues/2598) -> using cowplot's plot_grid with list of violin plots
-  #   plots <- VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6, combine=FALSE)
-  #   do.call(plot_grid, plots)
-  #   # VlnPlot(adata, features = input$select_genes, group.by=input$select_primary_grouping,  split.by = input$select_secondary_grouping, ncol=6)
-  # })
-  
-  # output$dot_plot<-renderPlot({
-  #   DotPlot(adata, features = input$select_genes, group.by = input$select_primary_grouping)
-  # })
-  
-  # observe({
-  #   x = input$id_node
-  #   edit <- toupper(isolate(input$select_genes))
-  #   if (length(edit)<12){
-  #     selection<-c(edit, x)
-  #   }else{
-  #     selection<-edit
-  #   }
-  #   updateSelectInput(session,'select_genes',
-  #                     choices = toupper(rownames(adata)),
-  #                     selected = selection)
-  # })
+  # updateSelectizeInput(session, "select_genes", choices = gene_names, server = TRUE)
+
+  observeEvent(input$id_node, {
+    input_gene_name <- gene_names[grep(paste0('^',input$id_node,'$'), capitilized_gene_names)]
+    edit <- isolate(input$select_genes)
+    if (length(edit)<12){
+      selection<-c(edit, input_gene_name)
+    }else{
+      selection<-edit
+    }
+    updateSelectizeInput(session,'select_genes', choices = selection, selected = selection, server = TRUE)
+  })
   ##########################
 }
 
