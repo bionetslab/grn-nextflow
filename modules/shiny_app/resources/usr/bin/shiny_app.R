@@ -40,7 +40,12 @@ option_list <- list(
   make_option(c("-m", "--mode"), type='character',
               default="seurat", help="Specifies which file type was used as an input for the pipeline"),
   make_option(c("-n", "--n.samples"), type="integer",
-              default=100, help="Number of meta cells used in the pipeline (Needed for comparison plot)")
+              default=100, help="Number of meta cells used in the pipeline (Needed for comparison plot)"),
+  make_option(c('-e', '--only_expression_matrix'), type = 'logical',
+              default = F, help = 'Can be set to true in case no count matrix is available or the provided matrix is an integration of multiple expression matrices, ...'),
+  make_option(c("--p.missing"), type="integer", default=10, 
+              help="Percentage of 0 allowed per gene",
+              metavar="number")
 )
 # changing opt$grntoools and opt$dgrntools to be suitable as input for the Shiny app
 opt <- parse_args(OptionParser(option_list=option_list))
@@ -51,7 +56,6 @@ opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
 
 # loading the modified network3d lib
 library(networkD3, lib.loc=sprintf("%s/lib", opt$project.path))
-
 # colors for the conditions
 colors <- c("#cc79a7", "#009e73", "#0072b2")
 
@@ -71,7 +75,6 @@ if (opt$mode == 'tsv') {
 
   # get condition names
   files <- list.files(path = file.path(opt$results.path, opt$selection), full.names = FALSE, recursive = FALSE)
-  print(files)
   cond_files <- c(grep('out_', files, value = TRUE))
   cond_name1 <- gsub('out_', '', cond_files[1])
   cond_name1 <- gsub('.tsv', '', cond_name1)
@@ -81,7 +84,6 @@ if (opt$mode == 'tsv') {
 
   configuration <- rbind(configuration,
     list(key = opt$selection, assay = 'RNA', group_var = NA, condition_names = cond_names, tools = tool_names, network_files = network_files))
-  print(configuration)
 } else {
 
   # parse selection
@@ -99,7 +101,6 @@ if (opt$mode == 'tsv') {
 
   # parsing the selection
   for (s in selections) {
-    print(s)
     split_string <- strsplit(s, ",")[[1]]
     key <- split_string[1]
     assay <- split_string[2]
@@ -159,6 +160,7 @@ if (opt$mode == 'tsv') {
   factor_vals <- sapply(factor_vals, function(x) { if(class(x) == 'factor') { droplevels(x) } else { x }})
   # add name of factor as key to the values (needed for identification inside of shiny)
   factor_vals <- sapply(names(factor_vals), function(name) { paste0(rep(name, length(factor_vals[[name]])), ': ', factor_vals[[name]])})
+
 }
 
 # Creating the UI of the Seurat object
@@ -203,13 +205,13 @@ ui <-
               textOutput("condition2_repressor", inline = TRUE),
               htmltools::br(),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 71px; margin-right: 5px; margin-bottom: 6px", colors[3])),
-              sprintf("Base GRN Activator"),
+              sprintf("Base GRN Pos. Cor."),
               htmltools::br(),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[3])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[3])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[3])),
               htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", colors[3])),
-              sprintf("Base GRN Repressor"),
+              sprintf("Base GRN Neg. Cor."),
             ),
             # Displayed DGRN
             forceNetworkOutput("net"),
@@ -309,13 +311,13 @@ ui <-
               type = 'tabs',
               tabPanel(
                 'Umap',
-                fluidRow(12, 
+                fluidRow( 
                   column(12, plotOutput("umap_plot")), 
                   column(12, plotOutput('standard_violin_plot'))
                 )
               ),
               tabPanel('Dotplot',
-                fluidRow(12, 
+                fluidRow( 
                   column(12, plotOutput("dot_plot"))
                 )
               )      
@@ -424,19 +426,12 @@ server <- function(input, output, session) {
   # cond2_metacells_data: Metacell data of differential condition 2 (preloaded when selecting a key to save computation time)
   # metacells_maxVal:     Maximum value of the metacell data. Used to keep a consistent range of the axis for the violin plot. The linear model plots do NOT have the same range because of visibility.
 
-  if (opt$mode == 'tsv') {
-    displayed_network <- reactiveValues(
-      diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
-      fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = NULL, 
-      cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_maxVal = 0
-    )
-  } else {
-    displayed_network <- reactiveValues(
-      diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
-      fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = adata, 
-      cond1_metacells_data = NULL, cond2_metacells_data = NULL, metacells_maxVal = 0
-    )
-  }
+  
+  displayed_network <- reactiveValues(
+    diffGRN_network_data = NULL, GRN_network_data = NULL, network_data = NULL, 
+    fn = NULL, links = NULL, diffConditions = "", grnConditions = "", adata = NULL,
+    cond1_metacells_data = NULL, cond2_metacells_data = NULL
+  )
 
   # creates the displayed network using network3D. For more information see https://christophergandrud.github.io/networkD3/
   create_network <- function() {
@@ -500,6 +495,7 @@ server <- function(input, output, session) {
         displayed_network$diffConditions <- strsplit(configuration[configuration$key == input$Key_pick,]$condition_names, ",")[[1]]
 
         if (opt$mode != 'tsv') {
+          displayed_network$adata <- adata
           # creating a column "group" in the adata object to match the conditions to the cells
           group_var.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_var, ":")[[1]]
           group_vals.all <- strsplit(configuration[configuration$key == input$Key_pick,]$group_vals, "-")[[1]]
@@ -514,7 +510,7 @@ server <- function(input, output, session) {
             group_idx <- as.numeric(strsplit(group_idx.all[i], ":")[[1]])
             group_var <- group_var.all[c(group_idx)]
             group_val.selection <- strsplit(group_vals.all[i], ",")[[1]]
-            filter_vector <- nrow(adata)
+            filter_vector <- nrow(displayed_network$adata)
             idx <- 1
             for (col_name in group_var) {
               
@@ -573,16 +569,16 @@ server <- function(input, output, session) {
 
       # render text for the network legend according to the condition names of the selected network
       output$condition1_activator <- renderText({
-        paste("Stronger in ", gsub(displayed_network$diffConditions[1], pattern="_", replacement=" "), " (Activator)")
+        paste("Stronger in ", gsub(displayed_network$diffConditions[1], pattern="_", replacement=" "), " (Pos. Cor.)")
       })
       output$condition1_repressor <- renderText({
-        paste("Stronger in ", gsub(displayed_network$diffConditions[1], pattern="_", replacement=" "), " (Repressor)")
+        paste("Stronger in ", gsub(displayed_network$diffConditions[1], pattern="_", replacement=" "), " (Neg. Cor.)")
       })
       output$condition2_activator <- renderText({
-        paste("Stronger in ", gsub(displayed_network$diffConditions[2], pattern="_", replacement=" "), " (Activator)")
+        paste("Stronger in ", gsub(displayed_network$diffConditions[2], pattern="_", replacement=" "), " (Pos. Cor.)")
       })
       output$condition2_repressor <- renderText({
-        paste("Stronger in ", gsub(displayed_network$diffConditions[2], pattern="_", replacement=" "), " (Repressor)")
+        paste("Stronger in ", gsub(displayed_network$diffConditions[2], pattern="_", replacement=" "), " (Neg. Cor.)")
       })
       
       updateTextInput(session, "DiffGRN_pick", value=opt$dgrntools[1])
@@ -602,16 +598,7 @@ server <- function(input, output, session) {
         displayed_network$cond2_metacells_data <- read.table(file = paste(gexp_path, out_files[1], sep="/"), header = TRUE, sep = "\t")
         displayed_network$cond1_metacells_data <- read.table(file = paste(gexp_path, out_files[2], sep="/"), header = TRUE, sep = "\t")
       }
-
-      # Computing the maximum value of the metacells
-      displayed_network$metacells_maxVal <- ceiling(
-        max(
-          c(
-            max(displayed_network$cond1_metacells_data[,2:ncol(displayed_network$cond1_metacells_data)]), 
-            max(displayed_network$cond2_metacells_data[,2:ncol(displayed_network$cond2_metacells_data)])
-          )
-        )
-      )
+      
       create_network()
     }
   })
@@ -633,8 +620,8 @@ server <- function(input, output, session) {
         displayed_network$diffGRN_network_data <- tmp
         if (!is.null(displayed_network$GRN_network_data)) {
           displayed_network$network_data <- rbind(displayed_network$diffGRN_network_data, displayed_network$GRN_network_data)
-          displayed_network$network_data[[1]] <-  str_to_title(displayed_network$network_data[[1]])
-          displayed_network$network_data[[2]] <-  str_to_title(displayed_network$network_data[[2]])
+          displayed_network$network_data[[1]] <-  toupper(displayed_network$network_data[[1]])
+          displayed_network$network_data[[2]] <-  toupper(displayed_network$network_data[[2]])
         } else {
           displayed_network$network_data <- displayed_network$diffGRN_network_data
         }
@@ -800,10 +787,12 @@ server <- function(input, output, session) {
       Condition = conditions,
       col = cols
     )
-    x_max <- ceiling(max(df$x))
+    x_max <- ceiling(max(df$x))  
     x_min <- floor(min(df$x))
     y_max <- ceiling(max(df$y))
     y_min <- floor(min(df$y))
+
+    total_min <- min(x_min, y_min)
 
     mapped_cols <- colors[c(1:2)]
     names(mapped_cols) <- condition_names
@@ -815,13 +804,13 @@ server <- function(input, output, session) {
 
     plot <- plot + 
       theme_classic() +
-      labs(x = "Source gene", y = "Target gene") + 
+      labs(x = "Source gene metacell expression", y = "Target gene metacell expression") + 
       theme(axis.title = element_text(size = 14), 
             axis.text = element_text(size = 12),
             legend.text = element_text(size = 12),
             legend.title = element_text(size = 14),
             plot.title = element_text(size = 15)) +
-      scale_x_continuous(limits = c(x_min, x_max)) + scale_y_continuous(limits = c(y_min, y_max))
+            expand_limits(x=0, y=0)
     return(list(plot=plot, title=title))
   }
   
@@ -834,9 +823,9 @@ server <- function(input, output, session) {
     condition_names <- sapply(displayed_network$diffConditions, function(x) gsub(pattern = '_', replacement = ' ', x))
     cols <- colors[c(1,2)]
     names(cols) <- condition_names
-    input_gene_name <- gene_names[grep(paste0('^',input$id_node,'$'), capitilized_gene_names)]
+    input_gene_name <- gene_names[grep(paste0('^',toupper(input$id_node),'$'), capitilized_gene_names)]
     asub <- subset(displayed_network$adata, subset = ShinyGroup != 'NA')
-    plot <- VlnPlot(asub, features = input_gene_name, group.by = 'ShinyGroup', cols = cols, y.max=displayed_network$metacells_maxVal)
+    plot <- VlnPlot(asub, features = input_gene_name, group.by = 'ShinyGroup', cols = cols)
     output$downloadGRNViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
   })
@@ -850,7 +839,6 @@ server <- function(input, output, session) {
     expr1_y <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == input$id_target, -1])    
     expr2_x <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_source, -1])    
     expr2_y <- as.numeric(displayed_network$cond2_metacells_data[displayed_network$cond2_metacells_data$Gene == input$id_target, -1])
-    
     res <- plot_linear_model(expr1_x, expr1_y, expr2_x, expr2_y)
     output$downloadGRNLinearModelPlot <- download_plot(res[[1]], res[[2]])
 
@@ -875,10 +863,15 @@ server <- function(input, output, session) {
         cells <- c()
         col_idx <- col_idx + 1
       }
+      
       val <- str_sub(s[2], 2) # removing the whitespace that is there for good looks :)
       cells <- c(cells, which(adata@meta.data[, col] == val))
     }
-    comp1_select.cells <- intersect(comp1_select.cells, cells)
+    if (length(col_names) > 1) {
+      comp1_select.cells <- intersect(comp1_select.cells, cells)
+    } else {
+      comp1_select.cells <- cells
+    }
 
     col_idx <- 1
     col_names <- unique(lapply(strsplit(comp_selec2, ':'), function(x) { x[1] }))
@@ -899,7 +892,11 @@ server <- function(input, output, session) {
       val <- str_sub(s[2], 2) # removing the whitespace that is there for good looks :)
       cells <- c(cells, which(adata@meta.data[, col] == val))
     }
-    comp2_select.cells <- intersect(comp2_select.cells, cells)
+    if (length(col_names) > 1) {
+      comp2_select.cells <- intersect(comp2_select.cells, cells)
+    } else {
+      comp2_select.cells <- cells
+    }
 
     return(list(comp1_select.cells = comp1_select.cells, comp2_select.cells = comp2_select.cells))
   }
@@ -923,14 +920,13 @@ server <- function(input, output, session) {
     comp_select.cells <- get_comp_selections(comp_selec1, comp_selec2)
     comp1_select.cells <- comp_select.cells$comp1_select.cells
     comp2_select.cells <- comp_select.cells$comp2_select.cells
-    
     displayed_network$adata$ShinyComparison[comp1_select.cells] <- cond_name1
     displayed_network$adata$ShinyComparison[comp2_select.cells] <- cond_name2
-    input_gene_name <- gene_names[grep(paste0('^',input$id_node,'$'), capitilized_gene_names)]
+    input_gene_name <- gene_names[grep(paste0('^',toupper(input$id_node),'$'), capitilized_gene_names)]
     cols <- colors[c(1,2)]
     names(cols) <- condition_names
     asub <- subset(displayed_network$adata, subset = ShinyComparison != 'NA')
-    plot <- VlnPlot(asub, features = input_gene_name, group.by = 'ShinyComparison', cols = cols, y.max=displayed_network$metacells_maxVal)
+    plot <- VlnPlot(asub, features = input_gene_name, group.by = 'ShinyComparison', cols = cols)
     output$downloadComparisonViolinPlot <- download_plot(plot, sprintf("%s || %s vs. %s", input$id_node, condition_names[1], condition_names[2]))
     plot
   })
@@ -939,37 +935,38 @@ server <- function(input, output, session) {
   
   meta_cell_creation <- function(subset) {
       n.samples <- 100 
-      p.missing <- 10  
-      print(subset)
+      p.missing <- 10
       n.cells<-nrow(subset@meta.data)
       # Compute number of cells to aggregate
-      cells.p.metasample<-nrow(subset@meta.data)/n.samples
+      cells.p.metasample<-nrow(subset@meta.data)/opt$n.samples
       # randomly assign each of the cells to a group
       set.seed(1)
-      subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
+      subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% opt$n.samples
       # Set the ident to the newly created meta.cell variable
       Idents(subset)<-"meta.cell"
       # Aggregate the expression
-      print(configuration[configuration$key == input$Key_pick]$assay)
-      agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = configuration[configuration$key == input$Key_pick]$assay)
-      agg@assays[[configuration[configuration$key == input$Key_pick]$assay]]@counts <-agg@assays[[configuration[configuration$key == input$Key_pick]$assay]]@counts / cells.p.metasample
-      agg <- NormalizeData(object = agg, assay = configuration[configuration$key == input$Key_pick]$assay)
-      # export the results
-      result.data.frame <- agg@assays[[configuration[configuration$key == input$Key_pick]$assay]]@data
+      agg@assays[[opt$assay]]@counts <- agg@assays[[opt$assay]]@counts / cells.p.metasample
+      if (opt$only_expression_matrix) {
+        # given seurat object is not a count matrix and just contains some form of expression data
+        result.data.frame <- agg@assays[[opt$assay]]@counts
+      } else {
+        agg <- NormalizeData(agg)
+        result.data.frame <- agg@assays[[opt$assay]]@data
+      }
       row.names<-rownames(result.data.frame)
       column.names<-paste0(paste0(input$Key_pick, collapse='_'), '_', colnames(result.data.frame))
       result.data.frame<-as.data.table(result.data.frame)
       result.data.frame<-cbind(row.names, result.data.frame)
       colnames(result.data.frame)<-c('Gene', column.names)
-      select<-which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(p.missing/100))
+      #select<-which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(p.missing/100))
       
-      result.data.frame<-result.data.frame[select, ]
+      #result.data.frame<-result.data.frame[select, ]
       result.data.frame$Gene <- toupper(result.data.frame$Gene)
       return(result.data.frame)
   }
 
   comparison_linear_model_plot <- eventReactive(input$compare_button, {
-    if(opt$mode == "tsv") {
+    if(opt$mode == "tsv" || is.null(input$id_source) || is.null(input$id_target)) {
       return(NULL)
     }
     comp_selec1 <- input$comp_selec_cond1
@@ -1024,7 +1021,13 @@ server <- function(input, output, session) {
 
   ########################## SECOND TAB (Seurat object information) ################################
   umap_plot <- eventReactive(input$plot_button, { 
-    FeaturePlot(adata, features = input$select_genes, ncol=6)
+    
+    umap_plot <- try(FeaturePlot(adata, features = input$select_genes, ncol=6), silent = TRUE)
+    if (class(umap_plot) == 'try-error') {
+      showNotification('No dimensionality plots were found in the seurat object. If you want to show any, please add them to the seurat object.', type = "warning")
+    } else {
+      umap_plot
+    }
   })
   output$umap_plot <- renderPlot({umap_plot()})
 
@@ -1044,7 +1047,7 @@ server <- function(input, output, session) {
   # updateSelectizeInput(session, "select_genes", choices = gene_names, server = TRUE)
 
   observeEvent(input$id_node, {
-    input_gene_name <- gene_names[grep(paste0('^',input$id_node,'$'), capitilized_gene_names)]
+    input_gene_name <- gene_names[grep(paste0('^',toupper(input$id_node),'$'), capitilized_gene_names)]
     edit <- isolate(input$select_genes)
     if (length(edit)<12){
       selection<-c(edit, input_gene_name)

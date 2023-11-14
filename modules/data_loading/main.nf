@@ -11,7 +11,7 @@ process CREATE_METACELLS_SEURAT {
 
   script:
   """
-  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -a $assay -m $mode --key=$key
+  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -a $assay -m $mode --key=$key -e $params.only_expression_matrix
   """
 }
 

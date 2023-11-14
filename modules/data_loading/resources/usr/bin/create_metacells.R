@@ -49,9 +49,12 @@ option_list <- list(
   make_option(c("-a", "--assay"), type = 'character', default="",
               help="Assay used"),
   make_option(c("-m", "--mode"), type = 'character',
-              help="data loading mode. Available modes: 'tsv', 'seurat'", default="seurat"),
+              help="data loading mode. Available modes: 'tsv', 'seurat', 'anndata'", default="seurat"),
   make_option(c("--key"), type = 'character',
-              help="Key that specifies the selection"))
+              help="Key that specifies the selection"),
+  make_option(c('-e', '--only_expression_matrix'), type = 'logical',
+              default = F, help = 'Can be set to true in case no count matrix is available or the provided matrix is an integration of multiple expression matrices, ...')
+  )
 
 # get command line options, if help option encountered print help and exit,
 # otherwise if options not found on command line then set defaults, 
@@ -84,8 +87,6 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   adata<-readRDS(opt$input.file)
   # adata<-adata$all
 
-
-
   # Set the ident to the required identity class
   Idents(adata)<- opt$group.var
   meta.cell.df<-NULL
@@ -115,14 +116,16 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   subset@meta.data$meta.cell<- sample(nrow(subset@meta.data), size = nrow(subset@meta.data), replace = FALSE) %% n.samples
   # Set the ident to the newly created meta.cell variable
   Idents(subset)<-"meta.cell"
-  # Aggregate the expression
-  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
-  # export the results
-  agg@assays[[opt$assay]]@counts <-agg@assays[[opt$assay]]@counts / cells.p.metasample
-
-  agg <- NormalizeData(object = agg, assay = opt$assay)
-  
-  result.data.frame <- agg@assays[[opt$assay]]@data
+  # Aggregate the count expression
+  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay, scale.factor = 10000)
+  agg@assays[[opt$assay]]@counts <- agg@assays[[opt$assay]]@counts / cells.p.metasample
+  if (opt$only_expression_matrix) {
+    # given seurat object is not a count matrix and just contains some form of expression data
+    result.data.frame <- agg@assays[[opt$assay]]@counts
+  } else {
+    agg <- NormalizeData(agg)
+    result.data.frame <- agg@assays[[opt$assay]]@data
+  }
   row.names<-rownames(result.data.frame)
   column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
   result.data.frame<-as.data.table(result.data.frame)
@@ -134,15 +137,15 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   else{
     meta.cell.df<-merge(meta.cell.df, result.data.frame, by = 'Gene')
   }
-  select<-which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(opt$p.missing/100))
-  meta.cell.df<-meta.cell.df[select, ]
-  # save the aggregated data frame into a tsv sheet
+   # save the aggregated data frame into a tsv sheet
+  select <- which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(opt$p.missing/100))
+  meta.cell.df <- meta.cell.df[select, ]
   fwrite(meta.cell.df, file = file.path(opt$output.file), sep='\t')
 } else if (opt$mode == "tsv") {
 
   expression_matrix <- read.table(opt$input.file, header = TRUE, row.names = 1, sep = "\t")
-  # subset <- CreateSeuratObject(counts = expression_matrix)
-  subset <- FindVariableFeatures(expression_matrix, selection.method = "vst", nfeatures = 3000)
+
+  subset <- CreateSeuratObject(counts = expression_matrix)  
   # Find number of barcodes in object
   n.cells <- nrow(subset)
   # Compute number of cells to aggregate
@@ -154,9 +157,8 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   Idents(subset) <- "meta.cell"
   # Aggregate the expression
   agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = 'RNA') 
-  
-  agg[['RNA']]$counts <- agg[['RNA']]$counts / cells.p.metasample
-  result.data.frame <- agg[['RNA']]$counts
+  agg[['RNA']]@counts <- agg[['RNA']]@counts / cells.p.metasample
+  result.data.frame <- agg[['RNA']]@counts
   row.names<-rownames(result.data.frame)
   column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
   result.data.frame<-as.data.table(result.data.frame)
