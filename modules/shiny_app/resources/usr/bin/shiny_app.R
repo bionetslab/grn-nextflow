@@ -958,9 +958,8 @@ server <- function(input, output, session) {
       result.data.frame<-as.data.table(result.data.frame)
       result.data.frame<-cbind(row.names, result.data.frame)
       colnames(result.data.frame)<-c('Gene', column.names)
-      #select<-which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(p.missing/100))
-      
-      #result.data.frame<-result.data.frame[select, ]
+      select <- which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(opt$p.missing/100))
+      result.data.frame <- result.data.frame[select, ]
       result.data.frame$Gene <- toupper(result.data.frame$Gene)
       return(result.data.frame)
   }
