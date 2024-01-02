@@ -21,7 +21,6 @@ from docopt import docopt
 from boostdiff.main_boostdiff import BoostDiff
 import numpy as np
 import pandas as pd
-from scipy.stats import linregress
 import sys
 
 

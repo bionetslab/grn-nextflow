@@ -1,4 +1,5 @@
 process PLOT_GRN {
+  conda params.conda_env_path + '/analysis'
   publishDir params.publish_dir
 
   input:

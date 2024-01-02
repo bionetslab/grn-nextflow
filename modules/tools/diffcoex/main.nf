@@ -1,4 +1,5 @@
 process RUN_TOOL {
+  conda params.conda_env_path + '/diffcoex'
   publishDir params.publish_dir 
 
   input:

@@ -41,8 +41,6 @@ option_list <- list(
               default="seurat", help="Specifies which file type was used as an input for the pipeline"),
   make_option(c("-n", "--n.samples"), type="integer",
               default=100, help="Number of meta cells used in the pipeline (Needed for comparison plot)"),
-  make_option(c('-e', '--only_expression_matrix'), type = 'logical',
-              default = F, help = 'Can be set to true in case no count matrix is available or the provided matrix is an integration of multiple expression matrices, ...'),
   make_option(c("--p.missing"), type="integer", default=10, 
               help="Percentage of 0 allowed per gene",
               metavar="number")
@@ -945,14 +943,12 @@ server <- function(input, output, session) {
       # Set the ident to the newly created meta.cell variable
       Idents(subset)<-"meta.cell"
       # Aggregate the expression
+      agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = configuration[configuration$key == input$Key_pick]$assay)
       agg@assays[[opt$assay]]@counts <- agg@assays[[opt$assay]]@counts / cells.p.metasample
-      if (opt$only_expression_matrix) {
-        # given seurat object is not a count matrix and just contains some form of expression data
-        result.data.frame <- agg@assays[[opt$assay]]@counts
-      } else {
-        agg <- NormalizeData(agg)
-        result.data.frame <- agg@assays[[opt$assay]]@data
-      }
+      
+      agg <- NormalizeData(agg)
+      result.data.frame <- agg@assays[[opt$assay]]@data
+
       row.names<-rownames(result.data.frame)
       column.names<-paste0(paste0(input$Key_pick, collapse='_'), '_', colnames(result.data.frame))
       result.data.frame<-as.data.table(result.data.frame)

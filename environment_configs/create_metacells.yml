@@ -1,0 +1,13 @@
+name: create_metacells
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - r
+dependencies:
+  - r
+  - r-essentials
+  - r-seurat
+  - r-tidyverse
+  - r-optparse
+  - r-data.table

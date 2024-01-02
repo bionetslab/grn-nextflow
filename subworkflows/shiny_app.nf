@@ -28,9 +28,9 @@ workflow SHINY_APP {
               // Function of this: adds every combination possible of the covarite config -> duplicates list if a list is given as a value of a key and then proceeds to create every combination
               covariate_config_keys = []
               covariate_config.each { selecKey, selecVals ->
-				covariate_config_keys.add([])
-				covariate_config_asColumnSeparatedList.add([])
-				selecVals.each { selection_id, selection_value ->
+              covariate_config_keys.add([])
+              covariate_config_asColumnSeparatedList.add([])
+              selecVals.each { selection_id, selection_value ->
                   if (selection_id == "output_file") {
                     output_files.add(selection_value)
                   } else {
@@ -105,18 +105,6 @@ workflow SHINY_APP {
         }
 
         CREATE_SHINY_APP(seurat_file, selection, diffgrn_tools, grn_tools, params.mode)
-        // selection_ids = params.data_loading_seurat.selection_ids_toUse.split(",")
-        // selection = []
-        // params.data_loading_seurat.selection.eachWithIndex { element, index ->    
-        //     id = "s" + index
-        //     if (id in selection_ids) {
-        //     selection.add([])
-        //     selection[selection.size-1] = params.data_loading_seurat.selection[id].values()
-        //     }
-        // }
-        // CREATE_SHINY_APP(
-//             selection.collect { it.join(",") }.join("-")
-//         )
 
   emit:
     selection

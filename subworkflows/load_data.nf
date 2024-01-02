@@ -38,6 +38,7 @@ def read_config() {
 	covariate_configs_keys = []        
 	selec_index_start = 0
 	selec_index_end = 1
+	print(params.comparison)
 	for (comparison in params.comparison) {
 		comparison.each { key, value ->
 
@@ -62,11 +63,14 @@ def read_config() {
 						output_files.add(selection_value)
 					} else {
 						covariate_config_keys[cov_index].add(selection_id)
+						println(selection_value)
 						if (selection_value instanceof List) {
+							print('test')
 							if (covariate_config_asColumnSeparatedList[cov_index].isEmpty()) {
 								for (elem in selection_value) {
 									covariate_config_asColumnSeparatedList[cov_index].add(elem)
 								}
+								print(covariate_config_asColumnSeparatedList)
 							} else {
 								// duplicate list #length(list)-1 times
 								cov_before = covariate_config_asColumnSeparatedList[cov_index]
@@ -88,6 +92,7 @@ def read_config() {
 						}
 					}
 				}
+				// print(covariate_config_asColumnSeparatedList)
 				// Check if covariate_config keys are the same inside one comparison -> Throw error if it is not the case 
 				// if (covariate_config_keys.size() > 1) {
 				// // if (!covariate_config_keys[0].equals(covariate_config_keys[1])) {

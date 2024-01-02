@@ -1,5 +1,6 @@
 process CREATE_METACELLS_SEURAT {
   label 'big_mem'
+  conda params.conda_env_path + '/create_metacells'
 
   input:
   path seurat_object
@@ -11,12 +12,13 @@ process CREATE_METACELLS_SEURAT {
 
   script:
   """
-  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -a $assay -m $mode --key=$key -e $params.only_expression_matrix
+  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -a $assay -m $mode --key=$key
   """
 }
 
 process CREATE_METACELLS_TSVFILES {
   label 'big_mem'
+  conda params.conda_env_path + '/create_metacells'
 
   input:
   tuple val (key), path (tsv_file)
@@ -34,6 +36,7 @@ process CREATE_METACELLS_TSVFILES {
 process CONVERT_ANNDATA_TO_SEURAT {
   publishDir params.publish_dir
   label 'big_mem'
+  conda params.conda_env_path + '/create_metacells'
 
   input:
   path anndata_object
@@ -48,6 +51,7 @@ process CONVERT_ANNDATA_TO_SEURAT {
 }
 
 process CHECK_FILES {
+  conda '/data/bionets/yb85avem/envs/internetXplorer/envs/create_metacells'
   publishDir params.publish_dir
 
   input:
@@ -55,9 +59,7 @@ process CHECK_FILES {
   
   output:
   tuple val (key), path ("${key}/out_${files[0]}"), path ("${key}/out_${files[1]}")
-  // path ("${key}/out_${files[0]}")
-  // path ("${key}/out_${files[1]}")
-
+  
   script:
   """
   mkdir -p "${key}/"

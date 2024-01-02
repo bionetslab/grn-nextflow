@@ -117,15 +117,11 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   # Set the ident to the newly created meta.cell variable
   Idents(subset)<-"meta.cell"
   # Aggregate the count expression
-  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay, scale.factor = 10000)
-  agg@assays[[opt$assay]]@counts <- agg@assays[[opt$assay]]@counts / cells.p.metasample
-  if (opt$only_expression_matrix) {
-    # given seurat object is not a count matrix and just contains some form of expression data
-    result.data.frame <- agg@assays[[opt$assay]]@counts
-  } else {
-    agg <- NormalizeData(agg)
-    result.data.frame <- agg@assays[[opt$assay]]@data
-  }
+  agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
+  agg@assays[[opt$assay]]$counts <- agg@assays[[opt$assay]]$counts / cells.p.metasample
+  agg <- NormalizeData(agg)
+  result.data.frame <- agg@assays[[opt$assay]]$data
+  
   row.names<-rownames(result.data.frame)
   column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
   result.data.frame<-as.data.table(result.data.frame)

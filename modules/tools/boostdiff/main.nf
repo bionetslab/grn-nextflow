@@ -1,4 +1,5 @@
 process RUN_TOOL {
+  conda params.conda_env_path + '/boostdiff'
   maxForks 5
   publishDir params.publish_dir
 
@@ -25,6 +26,7 @@ process RUN_TOOL {
 }
 
 process AGGREGATE_RESULTS {
+  conda params.conda_env_path + '/boostdiff'
   publishDir params.publish_dir
 
   input:
