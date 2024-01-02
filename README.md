@@ -4,22 +4,24 @@
 ```
 curl -fsSL get.nextflow.io | bash
 ```
-2) Clone the boostdiff repository and navigate to it:
+2) Clone the Inter-Net Xplorer repository and navigate to it (TODO change name of the repo):
 ```
-git clone git@github.com:bionetslab/boostdiff-nextflow.git && cd boostdiff-nextflow
+git clone --branch dgrn_nf git@github.com:bionetslab/boostdiff-nextflow.git && cd boostdiff-nextflow
 ```
-2) Install the neccesary conda environment (this will take time). This can be sped up dramatically by using mamba instead of conda:  
+3) Install mamba (see https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html). Needed for quicker installation of conda environments.
+4) Install all conda environments for all steps of the pipeline via:
 ```
-mamba env create --prefix=$(pwd)/environment --file=./environment.yml
-conda activate ./environment
+./initialize.sh $(ENVIRONMENT_INSTALLATION_DIRECTORY) $(CONDA_SOURCE_PATH)
 ```   
-3) Clone the `boostdiff_inference` tool (https://github.com/gihannagalindez/boostdiff_inference):
-```
-git clone git@github.com:gihannagalindez/boostdiff_inference.git && cd boostdiff_inference
-pip install .
-cd ..
-```
+- `ENVIRONMENT_INSTALLATION_DIRECTORY`: The path to the directory in which all of the environments should be installed. If you want them to be installed in the same directory as Inter-Net Xplorer use: `./`
+- `CONDA_SOURCE_PATH`: The path to the source (bin) directory of your conda installation.
+
+5) Go into `nextflow.config` and change the parameter `conda_env_path` to the `ENVIRONMENT_INSTALLATION_DIRECTORY` path
+
 Now you are set to run Inter-Net Xplorer!
+
+If you want to run the resulting shiny app activate the `shiny` conda environment in `ENVIRONMENT_INSTALLATION_DIRECTORY`.
+
 
 ## Interpretation of computed networks of Inter-Net Xplorer
 See this pdf [Network Explanation](https://github.com/bionetslab/grn-nextflow/blob/dgrn_nf/man/network_explanation.pdf)
