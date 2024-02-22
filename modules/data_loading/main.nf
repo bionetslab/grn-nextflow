@@ -51,7 +51,7 @@ process CONVERT_ANNDATA_TO_SEURAT {
 }
 
 process CHECK_FILES {
-  conda '/data/bionets/yb85avem/envs/internetXplorer/envs/create_metacells'
+  conda params.conda_env_path + '/create_metacells'
   publishDir params.publish_dir
 
   input:
