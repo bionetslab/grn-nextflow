@@ -15,8 +15,8 @@ workflow LOAD_DATA {
     } else if(params.mode == "tsv") {
       
       data_ch = Channel.of([params.comparison_id, [params.input_file1, params.input_file2]])
-      data = SELECT_DATA(params.mode, data_ch, null)
-
+	  data = SELECT_DATA(params.mode, data_ch, Channel.empty())
+	  data.view{ "value: $it" }
     } else if(params.mode == "anndata") {
     
 	  // This currently can only handle raw inputs and no filters/aggregation etc. -> not better than a tsv file
@@ -27,7 +27,7 @@ workflow LOAD_DATA {
       	data = SELECT_DATA(params.mode, seurat_file, input_case_ch)
 
     } else {
-      throw new Exception('Please select one of the following modes for the provided data: "seurat", "tsv"')
+      throw new Exception('Please select one of the following modes for the provided data: "seurat", "tsv", "anndata"')
     }  
 	emit:
     	data

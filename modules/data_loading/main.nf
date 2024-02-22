@@ -6,32 +6,32 @@ process CREATE_METACELLS_SEURAT {
   path seurat_object
   tuple val (key), val (assay), val (selection_criteria_keys), val(name), val (selection_criteria)
   val mode
+  val create_metacells
 
   output:
   tuple  val (key), path("${name}.tsv")
 
   script:
   """
-  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -a $assay -m $mode --key=$key
+  create_metacells.R -f $seurat_object -o "$name".tsv -g $selection_criteria_keys -s $selection_criteria -a $assay -m $mode --key=$key --create_metacells=$create_metacells
   """
 }
 
-process CREATE_METACELLS_TSVFILES {
-  label 'big_mem'
-  conda params.conda_env_path + '/create_metacells'
+// process CREATE_METACELLS_TSVFILES {
+//   label 'big_mem'
+//   conda params.conda_env_path + '/create_metacells'
 
-  input:
-  tuple val (key), path (tsv_file)
-  val mode
+//   input:
+//   tuple val (key), path (tsv_file_cond1), path (tsv_file_cond2)
 
-  output:
-  tuple val (key), path("aggregated_${tsv_file}")
+//   output:
+//   tuple val (key), path("${tsv_file_cond1}")
 
-  script:
-  """
-  create_metacells.R -f $tsv_file -o "aggregated_${tsv_file}" -n 100 -m $mode 
-  """  
-}
+//   script:
+//   """
+//   create_metacells.R -f $tsv_file -o "aggregated_${tsv_file}" -m $mode 
+//   """  
+// }
 
 process CONVERT_ANNDATA_TO_SEURAT {
   publishDir params.publish_dir

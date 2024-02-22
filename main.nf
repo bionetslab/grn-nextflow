@@ -12,6 +12,7 @@ publish_dir             : $params.publish_dir
 mode                    : $params.mode
 tools                   : $params.tools
 n_runs                  : $params.n_runs
+create_metacells        : $params.create_metacells
 boostdiff.n_estimators  : $params.boostdiff.n_estimators
 boostdiff.n_features    : $params.boostdiff.n_features   
 boostdiff.n_subsamples  : $params.boostdiff.n_subsamples
