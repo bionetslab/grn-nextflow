@@ -36,7 +36,7 @@ option_list <- list(
   make_option(c("-n", "--n.samples"), type="integer", default=100, 
               help="Number of meta cells to generate",
               metavar="number"),
-  make_option(c("-p", "--p.missing"), type="integer", default=100, 
+  make_option(c("-p", "--p.missing"), type="integer", default=10, 
               help="Percentage of 0 allowed per gene",
               metavar="number"),
   make_option(c("-s", "--selection"), type = 'character', default="", 
@@ -128,22 +128,16 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   }
   result.data.frame <- agg@assays[[opt$assay]]$data
   
-
   row.names<-rownames(result.data.frame)
   column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
   result.data.frame<-as.data.table(result.data.frame)
   result.data.frame<-cbind(row.names, result.data.frame)
   colnames(result.data.frame)<-c('Gene', column.names)
-  if(is.null(meta.cell.df)){
-    meta.cell.df<-result.data.frame
-  }
-  else{
-    meta.cell.df<-merge(meta.cell.df, result.data.frame, by = 'Gene')
-  }
-   # save the aggregated data frame into a tsv sheet
-  select <- which(rowSums(meta.cell.df==0)/(ncol(meta.cell.df)-1)<(opt$p.missing/100))
-  meta.cell.df <- meta.cell.df[select, ]
-  fwrite(meta.cell.df, file = file.path(opt$output.file), sep='\t')
+  # filter out genes that have 1 - opt$p.missing counts that are 0
+  select <- which(rowSums(result.data.frame==0)/(ncol(result.data.frame)-1)<(opt$p.missing/100))
+  result.data.frame <- result.data.frame[select, ]
+  # save the aggregated data frame into a tsv file
+  fwrite(result.data.frame, file = file.path(opt$output.file), sep='\t')
 } else if (opt$mode == "tsv") {
 
   expression_matrix <- read.table(opt$input.file, header = TRUE, row.names = 1, sep = "\t")
