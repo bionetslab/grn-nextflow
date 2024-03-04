@@ -16,3 +16,4 @@ dependencies:
   - r-dt
   - r-shinythemes
   - r-shinyhelper
+  - r-cartocolor
