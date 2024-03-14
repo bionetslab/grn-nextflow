@@ -171,12 +171,6 @@ option_list <- list(
     help = "Path to results"
   ),
   make_option(
-    c("-p", "--project.path"),
-    type = "character",
-    default = "",
-    help = "Project path"
-  ),
-  make_option(
     c("-s", "--selection"),
     type = "character",
     default = "",
@@ -229,17 +223,15 @@ opt <- parse_args(OptionParser(option_list = option_list))
 # loading the modified network3d lib
 # library(networkD3, lib.loc=sprintf("%s/lib", opt$project.path))
 metacells <- FALSE
-opt$results.path <-
-  "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
-opt$project.path <-
-  "/home/bionets-og86asub/Documents/netmap/workflows"
-opt$selection <-
-  "M0,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M0,RNA,cluster_type,BRCA_M0,BRCA_M0-M1,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M1,RNA,cluster_type,PRAD_M0,PRAD_M0-M2,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M2,RNA,cluster_type,BRCA_M0,BRCA_M0-M3,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M3,RNA,cluster_type,PRAD_M0,PRAD_M0"
-opt$seurat.file <-
-  "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
-opt$dgrntools <- "boostdiff,zscores,diffcoex"
-opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
-opt$grntools <- "grnboost2"
+# opt$results.path <-
+#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
+# opt$selection <-
+#   "M0,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M0,RNA,cluster_type,BRCA_M0,BRCA_M0-M1,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M1,RNA,cluster_type,PRAD_M0,PRAD_M0-M2,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M2,RNA,cluster_type,BRCA_M0,BRCA_M0-M3,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M3,RNA,cluster_type,PRAD_M0,PRAD_M0"
+# opt$seurat.file <-
+#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
+# opt$dgrntools <- "boostdiff,zscores,diffcoex"
+# opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
+# opt$grntools <- "grnboost2"
 if (opt$grntools != "No tools were chosen for GRN Inference") {
   opt$grntools <- c("NA", opt$grntools)
 }
