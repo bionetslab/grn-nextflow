@@ -6,7 +6,6 @@
 # Seurat must be imported before networkD3 and htmlwidgets.
 # Otherwise, the JS function of these libraries will be masked and this leads to errors
 # renv::activate('/home/bionets-og86asub/Documents/netmap/')
-
 library(Seurat)
 library(shiny)
 library(ggplot2)
@@ -28,139 +27,10 @@ require(dplyr)
 require(tidyr)
 require(rcartocolor)
 require(colorspace)
+require(presto)
 ################################################################################
-print("Hi")
 
-#source('style_generator.R')
-# Function to generate the style JSON based on tools and colors
-generate_style_json <- function(tools, colors, conditions, keys, arrow_styles, dash_styles) {
-  edge_styles <- c()
-  
-  for (i in seq_along(tools)) {
-    tool <- tools[i]
-    color <- colors[i]
-    condition <-conditions[i]
-    key <- keys[i]
-    arrow_style<-arrow_styles[i]
-    
-    if (length(unique(keys))>3){
-      print(unique(keys))
-      print('many arrow stke')
-      arrow_style<-'solid'
-      
-      edge_style <- paste0('{
-      "selector": "edge[tool = \'', tool, '\'][interaction = \'', condition, '\'][key = \'', key, '\'][effect < 0]",
-      "css": {
-        "line-color": "', color, '",
-        "target-arrow-color": "', color, '",
-        "target-arrow-shape": "tee",
-        "line-style": "', arrow_style, '"
-        }
-    }')
-      edge_styles <- c(edge_styles, edge_style)
-      
-      edge_style <- paste0('{
-      "selector": "edge[tool = \'', tool, '\'][interaction = \'', condition, '\'][key = \'', key, '\'][effect >= 0]",
-      "css": {
-        "line-color": "', color, '",
-        "target-arrow-color": "', color, '",
-        "target-arrow-shape": "triangle",
-        "line-style": "', arrow_style, '"
-
-      }
-    }')
-      
-      edge_styles <- c(edge_styles, edge_style)
-    }
-    else{
-      edge_style <- paste0('{
-      "selector": "edge[tool = \'', tool, '\'][interaction = \'', condition, '\'][key = \'', key, '\'][effect < 0]",
-      "css": {
-        "line-color": "', color, '",
-        "target-arrow-color": "', color, '",
-        "target-arrow-shape": "tee",
-        "line-style": "', arrow_style, '"
-        }
-    }')
-      edge_styles <- c(edge_styles, edge_style)
-      
-      edge_style <- paste0('{
-      "selector": "edge[tool = \'', tool, '\'][interaction = \'', condition, '\'][key = \'', key, '\'][effect >= 0]",
-      "css": {
-        "line-color": "', color, '",
-        "target-arrow-color": "', color, '",
-        "target-arrow-shape": "triangle",
-        "line-style": "', arrow_style, '"
-
-      }
-    }')
-      e<-'{
-        "selector": "edge[key]",
-        "css": {
-          "label": "data(key)",
-          "width": 3
-        }
-      }'
-      edge_styles <- c(edge_styles, edge_style)
-    }
-  }
-  if (length(unique(keys))>3){
-    
-    e<-'{
-        "selector": "edge[key]",
-        "css": {
-          "label": "data(key)",
-          "width": 3
-        }
-      }'
-    print(e)
-    edge_styles<-c(edge_styles, e)
-    
-  }
-  
-  style_json <- paste0('[', 
-                       '{
-                         "selector": "node",
-                         "css": {
-                           "border-width": "2px",
-                           "width": "data(size)",
-                           "height": "data(size)",
-                           "content": "data(id)"
-                         }
-                       },
-                       {
-                         "selector": "edge",
-                         "css": {
-                           "curve-style": "bezier",
-                           "control-point-step-size": 40,
-                           "target-arrow-shape": "triangle"
-                         }
-                       },',
-                       paste(edge_styles, collapse = ","),
-                       ',{
-                         "selector": "node:selected",
-                         "css": {
-                           "overlay-opacity": 0.3,
-                           "overlay-color": "gray",
-                           "background-color": "blue"
-                         }
-                       },
-                       {
-                         "selector": "node[value <= 0]",
-                         "css": {
-                           "background-color": "mapData(value, -5, 0, green, white)"
-                         }
-                       },
-                       {
-                         "selector": "node[value > 0]",
-                         "css": {
-                           "background-color": "mapData(value, 0, 10, white, red)"
-                         }
-                       }
-                     ]')
-  
-  return(style_json)
-}
+source('style_generator.R')
 
 
 option_list <- list(
@@ -169,12 +39,6 @@ option_list <- list(
     type = "character",
     default = "",
     help = "Path to results"
-  ),
-  make_option(
-    c("-p", "--project.path"),
-    type = "character",
-    default = "",
-    help = "Project path"
   ),
   make_option(
     c("-s", "--selection"),
@@ -218,6 +82,12 @@ option_list <- list(
     default = 10,
     help = "Percentage of 0 allowed per gene",
     metavar = "number"
+  ),
+  make_option(
+    c("--metacells"),
+    default = TRUE,
+    action = 'store_true',
+    help = "Metacell aggreation has been used"
   )
 )
 # changing opt$grntoools and opt$dgrntools to be suitable as input for the Shiny app
@@ -228,18 +98,16 @@ opt <- parse_args(OptionParser(option_list = option_list))
 
 # loading the modified network3d lib
 # library(networkD3, lib.loc=sprintf("%s/lib", opt$project.path))
-metacells <- FALSE
-#opt$results.path <-
-#  "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
-#opt$project.path <-
-#  "/home/bionets-og86asub/Documents/netmap/workflows"
-#opt$selection <-
-#  "M0,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M0,RNA,cluster_type,BRCA_M0,BRCA_M0-M1,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M1,RNA,cluster_type,PRAD_M0,PRAD_M0-M2,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M2,RNA,cluster_type,BRCA_M0,BRCA_M0-M3,RNA,cluster_type,NSCLC_M0,NSCLC_M0-M3,RNA,cluster_type,PRAD_M0,PRAD_M0"
-#opt$seurat.file <-
-#  "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
-#opt$dgrntools <- "boostdiff,zscores,diffcoex"
-#opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
-#opt$grntools <- "grnboost2"
+metacells <- opt$metacells
+# opt$results.path <-
+#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
+# opt$selection <-
+#   "NSCLC_BRCA,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_BRCA,RNA,cluster_type,BRCA_M0,BRCA_M0-NSCLC_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_PRAD,RNA,cluster_type,BRCA_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-BRCA_PRAD,RNA,cluster_type,PRAD_M0,PRAD_M0"
+# opt$seurat.file <-
+#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
+# opt$dgrntools <- "boostdiff,zscores,diffcoex"
+# opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
+# opt$grntools <- "grnboost2"
 if (opt$grntools != "No tools were chosen for GRN Inference") {
   opt$grntools <- c("NA", opt$grntools)
 }
@@ -248,10 +116,11 @@ if (opt$grntools != "No tools were chosen for GRN Inference") {
 create_graph <- function(all_networks, de.genes = NULL) {
   nodes <-
     data.table(
-      id = c(all_networks$target, all_networks$regulator),
+	      id = c(all_networks$target, all_networks$source),
       tool = c(all_networks$tool, all_networks$tool),
       keys = c(all_networks$key, all_networks$key)
     )
+
   # Necessary because key is reserved keywort in df.
   colnames(nodes)<-c('id', 'tool', 'key')
   nodes <- unique(nodes)
@@ -286,7 +155,6 @@ read_files <- function(file_list, key) {
       {
         data <- fread(file)
         if (!is.null(data) && nrow(data) > 0) {
-          print(basename(dirname(file)))
           data$tool <- basename(dirname(file))
           data$key <- basename(dirname(dirname(file)))
           all_data[[basename(dirname(file))]] <- data
@@ -299,12 +167,12 @@ read_files <- function(file_list, key) {
       }
     )
   }
-  print(all_data)
   all_data <- rbindlist(all_data)
   return(all_data)
 }
 
 make_color_map<-function(all_networks){
+  print('Generating colors')
   n.colors<-nrow(unique(all_networks[, .(interaction)]))
   color.pal<-rcartocolor::carto_pal(n=max(3, 2*n.colors), 'Prism')
   color.pal<-color.pal[seq(1, 2*n.colors, 2)]
@@ -312,12 +180,14 @@ make_color_map<-function(all_networks){
   color.df<-data.table(color.pal[1:n.colors], unique(all_networks[, .(interaction)]))
   colnames(color.df)<-c('color', 'interaction')
   color.df<-color.df %>% pivot_longer(-c('interaction'))
-  
+  print(color.df)
   combos<-unique(all_networks[, .(interaction, tool)])
-  combos<-unique(cross_join(combos, combos)[,.(interaction.x,tool.y)])
+  print(combos)
+  #combos<-unique(cross_join(combos, combos)[,.(interaction.x,tool.y)])
   colnames(combos)<-c('interaction', 'tool')
+  print(combos)
   combos<-merge(combos, color.df, by = 'interaction', allow.cartesian=T)
-  combos<-combos %>% group_by(interaction) %>% mutate(row_count = row_number())
+  combos<-combos %>% group_by(interaction) %>% mutate(row_count = row_number()) %>% as.data.table()
   combos$value<-sapply(1:nrow(combos), function(i) lighten(combos$value[i], (combos$row_count[i]-1)*(1/max(combos$row_count)))) 
   combos<-as.data.table(combos)
   combos<-combos[, .(tool, interaction, value)]
@@ -325,31 +195,28 @@ make_color_map<-function(all_networks){
   cl<-list()
   possible_styles<-c('solid', 'dotted', 'dashed')
   dashes<- ceiling(sqrt(length(unique(all_networks$key))-1))
-  dash.styles<-c('NA', 'NA',as.character(sapply(1:dashes, function(x) sapply(1:3, function(y) paste0('[', 2*x, ', ', 2*y, ']')))))
-  dash.width<- c('NA', 'NA', sapply(1:dashes, function(x) sapply(1:3, function(y) 2*x)))
-  dash.gap<- c('NA', 'NA', sapply(1:dashes, function(x) sapply(1:3, function(y) 2*y)))
+  #dash.styles<-c('NA', 'NA',as.character(sapply(1:dashes, function(x) sapply(1:3, function(y) paste0('[', 2*x, ', ', 2*y, ']')))))
+  #dash.width<- c('NA', 'NA', sapply(1:dashes, function(x) sapply(1:3, function(y) 2*x)))
+  #dash.gap<- c('NA', 'NA', sapply(1:dashes, function(x) sapply(1:3, function(y) 2*y)))
   possible_styles<-c('solid', 'dotted', rep('dashed', dashes*dashes))
 
   for (i in 1:length(unique(all_networks$key))){
     c<-combos
     c$arrow_style<-possible_styles[i]
     c$key<-unique(all_networks$key)[i]
-    c$dash.style<-dash.styles[i]
-    c$dash.width<-dash.width[i]
-    c$dash.gap<-dash.gap[i]
-    
     cl[[i]]<-c
   }
   combos<-rbindlist(cl)
+  print(combos)
   return(combos)
 }
 
 get_color<-function(color.df, t){
-  print('Getting color')
-  print(color.df[(tool==t) ])
+  print(color.df)
+  print(t)
   values<- unique(color.df[(tool==t)]$value)
   print(values)
-  names(values)<-unique(color.df$interaction)
+  names(values)<-unique(color.df[(tool==t)]$interaction)
   return(values)
   }
 
@@ -452,7 +319,6 @@ if (opt$mode == "tsv") {
     )
     
   color.map<-make_color_map(all_networks)
-  print(color.map)
 
   # Generate the style JSON
   style_json <- generate_style_json(color.map$tool, color.map$value, color.map$condition, color.map$key, color.map$arrow_style, color.map$dash.style)
@@ -480,12 +346,12 @@ if (opt$mode == "tsv") {
   factor_vals <- sapply(names(factor_vals), function(name) { paste0(rep(name, length(factor_vals[[name]])), ': ', factor_vals[[name]])})
   
   
-  # Idents(adata) <- "cluster_type"
+  Idents(adata) <- group.var
   # de.genes <- FindAllMarkers(adata)
   # de.genes$gene <- rownames(de.genes)
-  # de.genes$name <- de.genes$cluster
+  # de.genes$name <- as.character(de.genes$cluster)
   # colnames(de.genes)[2] <- "value"
-  de.genes<-NULL
+  
   # 
   graph <- create_graph(all_networks, de.genes)
   nodes <- graph[[1]]
@@ -548,7 +414,7 @@ ui <- shinyUI(fluidPage(
               )
             )
           )),
-          sliderInput('n.edges', 'Number of edges', 1, nrow(edges),  nrow(edges), step = 1, round = FALSE),
+          sliderInput('n.edges', 'Number of edges', 1, max(edges[, .N, by=c('tool', 'key')]$N),  max(edges[, .N, by=c('tool', 'key')]$N), step = 1, round = FALSE),
           
           selectInput(
             "doLayout",
@@ -569,11 +435,14 @@ ui <- shinyUI(fluidPage(
           selectInput(
             "setNodeAttributes",
             "Select Node Attribute:",
-            choices = unique(nodes$name)
+            choices = c('Select condition', unique(nodes$name)),
+            selected = 'Select condition'
           ),
           actionButton('generate_network', 'Generate Network'),
+          HTML("<br>"),
           plotOutput('legend'),
           uiOutput('arrow_legend'),
+          
           HTML("<br>"),
           actionButton("sfn", "Select First Neighbor"),
           actionButton("fit", "Fit Graph"),
@@ -585,6 +454,9 @@ ui <- shinyUI(fluidPage(
           # actionButton("loopConditions", "Loop Conditions"),
           # HTML("<br>"),
           actionButton("getSelectedNodes", "Get Selected Nodes"),
+          HTML("<br>"),
+          htmlOutput("selectedNodesDisplay"),
+          HTML("<br>"),
           width = 2,
           selectInput(
             "select_genes",
@@ -664,13 +536,13 @@ ui <- shinyUI(fluidPage(
               column(12, plotOutput("umap_plot")),
               column(12, plotOutput("standard_violin_plot"))
             )
-          ),
-          tabPanel(
-            "Dotplot",
-            fluidRow(column(
-              12, plotOutput("dot_plot")
-            ))
           )
+          # ,tabPanel(
+          #   "Dotplot",
+          #   fluidRow(column(
+          #     12, plotOutput("dot_plot")
+          #   ))
+          # )
         ))
       )
     ) # sidebarLayout
@@ -687,20 +559,54 @@ server <- function(input, output, session) {
     fit(session, 80)
   })
   
+  update_node_vals<-function(){
+    attribute <- "value"
+    if(input$setNodeAttributes == 'Select condition'){
+
+      setNodeAttributes(
+        session,
+        attributeName = attribute,
+        nodes = nodes[tool %in% input$DiffGRN_pick]$id,
+        values = rep(0, length(nodes[tool %in% input$DiffGRN_pick]$id))
+      )
+    }
+    else{
+    if('value' %in% colnames(nodes)){
+      updated.nodes <-
+        nodes[tool %in% input$DiffGRN_pick &
+                cluster %in% input$setNodeAttributes]$id
+      updated.values <-
+        nodes[tool %in% input$DiffGRN_pick &
+                cluster %in% input$setNodeAttributes]$value
+      difference <-
+        setdiff(unique(nodes$id), nodes[tool %in% input$DiffGRN_pick &
+                                          cluster %in% input$setNodeAttributes]$id)
+      
+      updated.nodes <- c(updated.nodes, difference)
+      updated.values <- c(updated.values, rep(0, length(difference)))
+      updated.values[is.infinite(updated.values)] <- 0
+      updated.values[is.na(updated.values)]<-0
+      setNodeAttributes(
+        session,
+        attributeName = attribute,
+        nodes = updated.nodes,
+        values = updated.values
+      )
+    }
+    }
+  }
+  
 
   render_graph<-function(genes = NULL){
     
-    print('Rendering graph')
     k <- isolate(input$Key_pick)
     d <- isolate(input$DiffGRN_pick)
     c <- isolate(input$selectCondition)
     n.edges <- isolate(input$n.edges)
     
-    print(c)
     edges <- edges %>% group_by(tool, key) %>% slice_max(n = n.edges, weight) %>% as.data.table()
     edges<-edges[(tool %in% d) & (key %in% k) & (interaction %in% c)]
     color.map(make_color_map(edges))
-    print(color.map)
     # Generate the style JSON
     style_json <- generate_style_json(color.map()$tool, color.map()$value, color.map()$interaction, color.map()$key, color.map()$arrow_style, color.map()$dash.style)
     # Write the style JSON to a file
@@ -711,22 +617,20 @@ server <- function(input, output, session) {
     edges<-edges[ (source %in% genes) & (target %in% genes)]
     }
 
-    print(d)
-    print(edges)
     nodes<-nodes[id %in% c(edges$target, edges$source)]
-    print(nodes)
     nodes<-nodes[(tool %in% d) & (key %in% k)]
-    
-    print(k)
-    print(edges)
 
+    # Did not manage to init graph otherwise
+    n_t<-nodes
+    n_t$value<-0
     
     graph.json <-
       dataFramesToJSON(
-        tbl.nodes = nodes,
+        tbl.nodes = n_t,
         tbl.edges = edges
       )
-
+    
+    
     output$cyjShiny <- renderCyjShiny({
       cyjShiny(graph.json,
                layoutName = "cola",
@@ -734,23 +638,62 @@ server <- function(input, output, session) {
       )
     })
 
-    
     output$legend<-renderPlot({
-      ggplot(color.map()[tool %in% d], aes(x = interaction, y = tool, fill = value)) +
-        geom_tile(color = "white") +
+      cm<-color.map()[tool %in% d]
+      cm<-cm[tool %in% opt$dgrntools]
+      gp<-ggplot(cm, aes(x = interaction, y = tool, fill = value)) +
+        geom_tile() +
         scale_fill_identity() +
-        labs(x = "Condition", y = "Tool") +
+        labs(x = "", y = "Tool") +
         theme_minimal() +
-        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 20), axis.text.y =element_text(size = 20, hjust = 0.5) ) +
         guides(fill = FALSE)  # Hide the legend + facet_wrap(~key)
+      cm<-color.map()[tool %in% d]
+      
+      cm<-cm[tool %in% opt$grntools]
+      rel_height <- length(intersect(d, opt$grntools))/length(intersect(c(opt$dgrntools, opt$grntools), d))
+      print(rel_height)
+      gp2<-ggplot(cm, aes(x = interaction, y = tool, fill = value)) +
+        geom_tile() +
+        xlab("")+ylab("")+
+        scale_fill_identity() +
+        theme_minimal() +
+        theme(axis.text.x = element_blank(), panel.grid = element_blank(), axis.text.y =element_text(size = 20, hjust = 0.5)) +
+        guides(fill = FALSE)  # Hide the legend + facet_wrap(~key)
+      plot_grid(gp, gp2, nrow = 2, rel_heights = c(1-rel_height, rel_height))
+        
     })
+    
+    output$arrow_legend<-renderUI({
+      d <- isolate(input$DiffGRN_pick)
+      styles<- unique(color.map()[, .(key, arrow_style)])
+      tl_dot<-lapply(1:12, function(x) htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 2px; margin-right: 0px; margin-bottom: 6px", 'grey')))
+      tl_dash<-lapply(1:4, function(x) htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 10px; margin-right: 5px; margin-bottom: 6px", 'grey')))
+      tl_sol<-list(htmltools::div(style = sprintf("display: inline-block; background-color: %s; height: 5px; width: 69px; margin-right: 5px; margin-bottom: 2px", 'grey')))
+
+      
+      
+      tl<-list()
+      for (s in 1:nrow(styles)){
+        if(styles$arrow_style[s]=='solid'){
+          tl[[s]]<-list(tl_sol, htmltools::span(styles$key[s]), htmltools::br())
+        }
+        if(styles$arrow_style[s]=='dotted'){
+          tl[[s]]<-list(tl_dot, htmltools::span(styles$key[s]), htmltools::br())
+        }
+        if(styles$arrow_style[s]=='dashed'){
+          tl[[s]]<-list(tl_dash, htmltools::span(styles$key[s]), htmltools::br())
+        }
+      }
+    })
+    
 
   }
   
   
   observeEvent(input$generate_network, {
-    print('Trigger')
     render_graph()
+
   })
   
   
@@ -761,38 +704,19 @@ server <- function(input, output, session) {
     genes<-isolate(input$select_genes)
     if (length(genes)>0){
     render_graph(genes)
+    update_node_vals()
     }
     else{
       render_graph()
+      update_node_vals()
+      
     }
   })
   
-  observeEvent(input$setNodeAttributes, {
-    attribute <- "value"
-    if('value' %in% colnames(nodes)){
-      
 
-    updated.nodes <-
-      nodes[tool %in% input$DiffGRN_pick &
-              cluster %in% input$setNodeAttributes]$id
-    updated.values <-
-      nodes[tool %in% input$DiffGRN_pick &
-              cluster %in% input$setNodeAttributes]$value
-    difference <-
-      setdiff(unique(nodes$id), nodes[tool %in% input$DiffGRN_pick &
-                                        cluster %in% input$setNodeAttributes]$id)
-    updated.nodes <- c(updated.nodes, difference)
-    updated.values <- c(updated.values, rep(0, length(difference)))
-    updated.values[is.infinite(updated.values)] <- 0
-    isolate(
-      setNodeAttributes(
-        session,
-        attributeName = attribute,
-        nodes = updated.nodes,
-        values = updated.values
-      )
-    )
-    }
+  
+  observeEvent(input$setNodeAttributes, {
+    update_node_vals()
   })
   
   
@@ -824,7 +748,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$getSelectedNodes, ignoreInit = TRUE, {
-    print("Get selecte node")
     output$selectedNodesDisplay <- renderText({
       " "
     })
@@ -837,7 +760,6 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$selectedNodes, {
-    print("Selected Node")
     newNodes <- input$selectedNodes
     
     output$selectedNodesDisplay <- renderText({
@@ -935,10 +857,8 @@ server <- function(input, output, session) {
   # function for plotting a linear model of two conditions given the x,y expression data of both
   # plot_linear_model <- function(expr1_x, expr1_y, expr2_x, expr2_y, conditions) {
   plot_linear_model <- function(df, source, target) {
-    print(df)
     mapped_cols <- unique(df$cols)
     names(mapped_cols) <- unique(df$Condition)
-    print("create Plot")
     title <-'Linear model'
     plot <- ggplot(df, aes(x = x, y = y, colour = Condition)) +
       geom_point() +
@@ -951,7 +871,6 @@ server <- function(input, output, session) {
       ggtitle(title) +
       theme(plot.title = element_text(hjust = 0.5))
     
-    print('add title')
     plot <- plot +
       theme_classic() +
       labs(x = paste0(source, " expression"), y = paste0(target, " expression")) +
@@ -970,13 +889,9 @@ server <- function(input, output, session) {
     elist<-list()
 
     for (co in conditions){
-      if (co %in% unique(adata$cluster_type)){
-      print(co)
-      expr1 <-
-        as.data.table(t(as.matrix(
-          subset(adata, subset = cluster_type == co)[c(source, target)]@assays$RNA@counts
-        )))
-      
+      if (co %in% unique(adata@meta.data[, group.var])){
+      e<-FetchData(object = adata, vars = group.var)
+      expr1 <-as.data.table(t(as.matrix(adata[, which(e==co)][c(source, target)]@assays$RNA@counts)))
       expr1$condition <- co
       elist[[co]]<-expr1
     }
@@ -995,7 +910,6 @@ server <- function(input, output, session) {
       as.data.table()
     expression <- merge(expression,stats, by.x = c("condition", "name"), by.y = c("condition", "gene"))
     expression[, outlier := ifelse(value > (mean + 2 * std), "outlier", "normal")]
-    print(color.map())
     colors<-get_color(color.map(), t= isolate(input$DiffGRN_pick[1]))
     print(colors)
     expression$color<-sapply(expression$condition, function(x) colors[x])
@@ -1020,7 +934,6 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    print("Linear Model plot")
     s <- input$selectedNodes[1]
     t <- input$selectedNodes[2]
     k<-isolate(input$Key_pick)
@@ -1232,13 +1145,9 @@ server <- function(input, output, session) {
     key <- isolate(input$Key_pick)
     condition_names <-
       unique(selections[key %in% isolate(input$Key_pick)]$condition)[1:2]
-    print(condition_names)
-    
+
     cols <-get_color(color.map(), t= isolate(input$DiffGRN_pick[1]))
-    #group_var <- selections[key %in% isolate(input$Key_pick)]$group_var
-    #print(group_var)
     conds<-isolate(input$selectCondition)
-    print(cols)
     input_gene_name <-
       gene_names[grep(paste0("^", toupper(input$selectedNodes[1]), "$"), capitilized_gene_names)]
     plot <-
@@ -1302,12 +1211,12 @@ server <- function(input, output, session) {
   })
   
   standard_violin_plot <- eventReactive(input$plot_button, {
-    print("VLN")
     # Seurat's VlnPlot does not show the legend if more than one gene is plotted (see https://github.com/satijalab/seurat/issues/2598) -> using cowplot's plot_grid with list of violin plots
+    mygenes<-intersect(input$select_genes, rownames(adata))
     plots <-
       VlnPlot(
         adata,
-        features = input$select_genes,
+        features = mygenes,
         group.by = input$select_primary_grouping,
         split.by = input$select_secondary_grouping,
         ncol = 6,
@@ -1323,9 +1232,10 @@ server <- function(input, output, session) {
   
   dot_plot <- eventReactive(input$plot_button, {
     # Seurat's VlnPlot does not show the legend if more than one gene is plotted (see https://github.com/satijalab/seurat/issues/2598) -> using cowplot's plot_grid with list of violin plots
+    mygenes<-intersect(input$select_genes, rownames(adata))
     DotPlot(
       adata,
-      features = input$select_genes,
+      features = mygenes,
       group.by = input$select_primary_grouping
     )
   })
