@@ -347,10 +347,10 @@ if (opt$mode == "tsv") {
   
   
   Idents(adata) <- group.var
-  # de.genes <- FindAllMarkers(adata)
-  # de.genes$gene <- rownames(de.genes)
-  # de.genes$name <- as.character(de.genes$cluster)
-  # colnames(de.genes)[2] <- "value"
+  de.genes <- FindAllMarkers(adata)
+  de.genes$gene <- rownames(de.genes)
+  de.genes$name <- as.character(de.genes$cluster)
+  colnames(de.genes)[2] <- "value"
   
   # 
   graph <- create_graph(all_networks, de.genes)
