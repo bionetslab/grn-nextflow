@@ -25,6 +25,13 @@ for file in "$(pwd)/environment_configs"/*; do
                 cd $current_directory
                 source $2/deactivate
             fi
+            if [[ $file == *'shiny'* ]]; then
+                # special installation steps needed for boostdiff
+                current_directory=$(pwd)
+                source $2/activate "$1/envs/$env_name"
+                Rscript install_shiny_packages.R
+                source $2/deactivate
+            fi
             # Add your own special installation steps for an environment if needed:
         fi
     fi

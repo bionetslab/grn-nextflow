@@ -104,7 +104,7 @@ workflow SHINY_APP {
           seurat_file = 'NA'
         }
 
-        CREATE_SHINY_APP(seurat_file, selection, diffgrn_tools, grn_tools, params.mode)
+        CREATE_SHINY_APP(seurat_file, selection, diffgrn_tools, grn_tools, params.mode, params.create_metacells)
 
   emit:
     selection
