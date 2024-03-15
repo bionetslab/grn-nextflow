@@ -685,6 +685,8 @@ server <- function(input, output, session) {
           tl[[s]]<-list(tl_dash, htmltools::span(styles$key[s]), htmltools::br())
         }
       }
+      
+    print(tagList(tl))
     })
     
 
@@ -857,6 +859,7 @@ server <- function(input, output, session) {
   # function for plotting a linear model of two conditions given the x,y expression data of both
   # plot_linear_model <- function(expr1_x, expr1_y, expr2_x, expr2_y, conditions) {
   plot_linear_model <- function(df, source, target) {
+    print(df)
     mapped_cols <- unique(df$cols)
     names(mapped_cols) <- unique(df$Condition)
     title <-'Linear model'
