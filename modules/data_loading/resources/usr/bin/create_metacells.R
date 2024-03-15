@@ -61,7 +61,7 @@ option_list <- list(
 # get command line options, if help option encountered print help and exit,
 # otherwise if options not found on command line then set defaults, 
 opt <- parse_args(OptionParser(option_list=option_list))
-# opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds'
+# opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/misc/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds'
 # n.samples<-100
 # opt$group.var<- "infection:tissue:subject:time"
 # opt$selection<- "Doc:Spleen:1:d10,Doc:Spleen:3:d10"
@@ -69,7 +69,7 @@ opt <- parse_args(OptionParser(option_list=option_list))
 # opt$cluster.ids<-'1:2'
 # opt$clusters<-c(1,2)
 # opt$output.file<-'/home/bionets-og86asub/Documents/netmap/data/Doc_Spleen_d10.tsv'
-
+# opt$assay<-'SCTmerged'
 n.samples<-opt$n.samples
 
 if (opt$mode == "seurat" || opt$mode == "anndata") {
@@ -87,10 +87,11 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
   opt$selection<-unname(sapply(opt$selection, function(x) strsplit(x ,":")))
   #load data and extract seurat object
   adata<-readRDS(opt$input.file)
-  # adata<-adata$all
+  #adata<-adata$all
 
   # Set the ident to the required identity class
   Idents(adata)<- opt$group.var
+  DefaultAssay(adata)<-opt$assay
   meta.cell.df<-NULL
   # For each group:
   select.cells.all <- c()
@@ -121,12 +122,12 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
     Idents(subset)<-"meta.cell"
     # Aggregate the count expression
     agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
-    agg@assays[[opt$assay]]$counts <- agg@assays[[opt$assay]]$counts / cells.p.metasample
+    agg[[opt$assay]]@counts <- agg[[opt$assay]]@counts / cells.p.metasample
     agg <- NormalizeData(agg)
   } else {
     agg <- NormalizeData(subset)
   }
-  result.data.frame <- agg@assays[[opt$assay]]$data
+  result.data.frame <- agg[[opt$assay]]@data
   
   row.names<-rownames(result.data.frame)
   column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
