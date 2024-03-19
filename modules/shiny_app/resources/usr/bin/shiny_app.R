@@ -97,15 +97,15 @@ if (opt$grntools != "No tools were chosen for GRN Inference") {
   opt$grntools <- c("NA", opt$grntools)
 }
 
-# metacells<-FALSE
-# opt$results.path <-
-#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
-# opt$selection <-"NSCLC_BRCA,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_BRCA,RNA,cluster_type,BRCA_M0,BRCA_M0-NSCLC_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_PRAD,RNA,cluster_type,PRAD_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,BRCA_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,PRAD_M0,PRAD_M0"
-# opt$seurat.file <-
-#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
-# opt$dgrntools <- "boostdiff,zscores,diffcoex"
-# opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
-# opt$grntools <- "grnboost2"
+metacells<-FALSE
+opt$results.path <-
+  "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
+opt$selection <-"NSCLC_BRCA,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_BRCA,RNA,cluster_type,BRCA_M0,BRCA_M0-NSCLC_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_PRAD,RNA,cluster_type,PRAD_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,BRCA_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,PRAD_M0,PRAD_M0"
+opt$seurat.file <-
+  "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
+opt$dgrntools <- "boostdiff,zscores,diffcoex"
+opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
+opt$grntools <- "grnboost2"
 # 
 
 # opt$results.path <-
