@@ -61,16 +61,17 @@ option_list <- list(
 # get command line options, if help option encountered print help and exit,
 # otherwise if options not found on command line then set defaults, 
 opt <- parse_args(OptionParser(option_list=option_list))
-# opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/misc/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds'
-# n.samples<-100
-# opt$group.var<- "infection:tissue:subject:time"
-# opt$selection<- "Doc:Spleen:1:d10,Doc:Spleen:3:d10"
-# opt$cluster.name<-'cluster'
-# opt$cluster.ids<-'1:2'
-# opt$clusters<-c(1,2)
-# opt$output.file<-'/home/bionets-og86asub/Documents/netmap/data/Doc_Spleen_d10.tsv'
-# opt$assay<-'SCTmerged'
+opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/misc/ko_vs_wt.rds'
+n.samples<-100
+opt$group.var<- "cluster:genotype"
+opt$selection<- "8:wt,8:ko"
+opt$cluster.name<-'cluster'
+opt$cluster.ids<-'1:2'
+opt$clusters<-c(1,2)
+opt$output.file<-'/home/bionets-og86asub/Documents/netmap/data/Doc_Spleen_d10.tsv'
+opt$assay<-'SCT'
 n.samples<-opt$n.samples
+opt$key<-'test'
 
 if (opt$mode == "seurat" || opt$mode == "anndata") {
 
@@ -121,16 +122,16 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
     # Set the ident to the newly created meta.cell variable
     Idents(subset)<-"meta.cell"
     # Aggregate the count expression
-    agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
-    agg[[opt$assay]]@counts <- agg[[opt$assay]]@counts / cells.p.metasample
+    agg<-AggregateExpression(subset, return.seurat = T, assays = opt$assay)
+    agg[[opt$assay]]@layers$counts <- agg[[opt$assay]]@layers$counts / cells.p.metasample
     agg <- NormalizeData(agg)
   } else {
     agg <- NormalizeData(subset)
   }
-  result.data.frame <- agg[[opt$assay]]@data
+  result.data.frame <- agg[[opt$assay]]@layers$data
   
-  row.names<-rownames(result.data.frame)
-  column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
+  row.names<-rownames(agg)
+  column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(agg))
   result.data.frame<-as.data.table(result.data.frame)
   result.data.frame<-cbind(row.names, result.data.frame)
   colnames(result.data.frame)<-c('Gene', column.names)
