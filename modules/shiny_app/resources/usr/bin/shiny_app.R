@@ -30,8 +30,8 @@ require(colorspace)
 require(presto)
 ################################################################################
 
-source('~/Documents/netmap/workflows/modules/shiny_app/resources/usr/bin/style_generator.R')
-source('~/Documents/netmap/workflows/modules/shiny_app/resources/usr/bin/auxiliary_functions.R')
+source('style_generator.R')
+source('auxiliary_functions.R')
 
 option_list <- list(
   make_option(
