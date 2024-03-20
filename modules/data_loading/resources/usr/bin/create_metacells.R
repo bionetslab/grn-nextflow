@@ -61,16 +61,17 @@ option_list <- list(
 # get command line options, if help option encountered print help and exit,
 # otherwise if options not found on command line then set defaults, 
 opt <- parse_args(OptionParser(option_list=option_list))
-# opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/misc/ga_an0228_10x_deepseq_filtered_smarta_merged_tissue_integrated_rep_timepoint_infection_filtered_seurat.rds'
-# n.samples<-100
-# opt$group.var<- "infection:tissue:subject:time"
-# opt$selection<- "Doc:Spleen:1:d10,Doc:Spleen:3:d10"
-# opt$cluster.name<-'cluster'
-# opt$cluster.ids<-'1:2'
-# opt$clusters<-c(1,2)
-# opt$output.file<-'/home/bionets-og86asub/Documents/netmap/data/Doc_Spleen_d10.tsv'
-# opt$assay<-'SCTmerged'
+opt$input.file<-'/home/bionets-og86asub/Documents/netmap/data/misc/ko_vs_wt.rds'
+n.samples<-100
+opt$group.var<- "cluster:genotype"
+opt$selection<- "8:wt,8:ko"
+opt$cluster.name<-'cluster'
+opt$cluster.ids<-'1:2'
+opt$clusters<-c(1,2)
+opt$output.file<-'/home/bionets-og86asub/Documents/netmap/data/Doc_Spleen_d10.tsv'
+opt$assay<-'SCT'
 n.samples<-opt$n.samples
+opt$key<-'test'
 
 if (opt$mode == "seurat" || opt$mode == "anndata") {
 
@@ -121,11 +122,8 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
     # Set the ident to the newly created meta.cell variable
     Idents(subset)<-"meta.cell"
     # Aggregate the count expression
-    print('Aggregating expression')
     agg<-AggregateExpression(subset, return.seurat = T, assays = opt$assay)
-    print('Aggregation done')
     agg[[opt$assay]]@layers$counts <- agg[[opt$assay]]@layers$counts / cells.p.metasample
-  print('Normalizing')
     agg <- NormalizeData(agg)
   } else {
     agg <- NormalizeData(subset)

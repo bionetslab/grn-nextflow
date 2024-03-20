@@ -15,75 +15,7 @@
                            "target-arrow-shape": "triangle"
                          }
                        },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#38A6A5",
-        "target-arrow-color": "#38A6A5",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#38A6A5",
-        "target-arrow-color": "#38A6A5",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#5CBFBE",
-        "target-arrow-color": "#5CBFBE",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#5CBFBE",
-        "target-arrow-color": "#5CBFBE",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#7AD9D8",
-        "target-arrow-color": "#7AD9D8",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#7AD9D8",
-        "target-arrow-color": "#7AD9D8",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#98F4F3",
-        "target-arrow-color": "#98F4F3",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#98F4F3",
-        "target-arrow-color": "#98F4F3",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
         "line-color": "#5F4690",
         "target-arrow-color": "#5F4690",
@@ -91,7 +23,7 @@
         "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
         "line-color": "#5F4690",
         "target-arrow-color": "#5F4690",
@@ -100,126 +32,41 @@
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect < 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
-        "line-color": "#8570B6",
-        "target-arrow-color": "#8570B6",
+        "line-color": "#937EC4",
+        "target-arrow-color": "#937EC4",
         "target-arrow-shape": "tee",
         "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect >= 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
-        "line-color": "#8570B6",
-        "target-arrow-color": "#8570B6",
+        "line-color": "#937EC4",
+        "target-arrow-color": "#937EC4",
         "target-arrow-shape": "triangle",
         "line-style": "solid"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
-        "line-color": "#AF9AE0",
-        "target-arrow-color": "#AF9AE0",
+        "line-color": "#CCB8FE",
+        "target-arrow-color": "#CCB8FE",
         "target-arrow-shape": "tee",
         "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
-        "line-color": "#AF9AE0",
-        "target-arrow-color": "#AF9AE0",
+        "line-color": "#CCB8FE",
+        "target-arrow-color": "#CCB8FE",
         "target-arrow-shape": "triangle",
         "line-style": "solid"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#D8C9FF",
-        "target-arrow-color": "#D8C9FF",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#D8C9FF",
-        "target-arrow-color": "#D8C9FF",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#E17C05",
-        "target-arrow-color": "#E17C05",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#E17C05",
-        "target-arrow-color": "#E17C05",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#FE9541",
-        "target-arrow-color": "#FE9541",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#FE9541",
-        "target-arrow-color": "#FE9541",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#FFBA96",
-        "target-arrow-color": "#FFBA96",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#FFBA96",
-        "target-arrow-color": "#FFBA96",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#FFDDCF",
-        "target-arrow-color": "#FFDDCF",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#FFDDCF",
-        "target-arrow-color": "#FFDDCF",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
         "line-color": "#73AF48",
         "target-arrow-color": "#73AF48",
@@ -227,7 +74,7 @@
         "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M0'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
         "line-color": "#73AF48",
         "target-arrow-color": "#73AF48",
@@ -236,126 +83,92 @@
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect < 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
-        "line-color": "#8AC764",
-        "target-arrow-color": "#8AC764",
+        "line-color": "#92CE6D",
+        "target-arrow-color": "#92CE6D",
         "target-arrow-shape": "tee",
         "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M0'][effect >= 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
-        "line-color": "#8AC764",
-        "target-arrow-color": "#8AC764",
+        "line-color": "#92CE6D",
+        "target-arrow-color": "#92CE6D",
         "target-arrow-shape": "triangle",
         "line-style": "solid"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
-        "line-color": "#A2DF7E",
-        "target-arrow-color": "#A2DF7E",
+        "line-color": "#B2EF8F",
+        "target-arrow-color": "#B2EF8F",
         "target-arrow-shape": "tee",
         "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M0'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
-        "line-color": "#A2DF7E",
-        "target-arrow-color": "#A2DF7E",
+        "line-color": "#B2EF8F",
+        "target-arrow-color": "#B2EF8F",
         "target-arrow-shape": "triangle",
         "line-style": "solid"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect < 0]",
-      "css": {
-        "line-color": "#BAF798",
-        "target-arrow-color": "#BAF798",
-        "target-arrow-shape": "tee",
-        "line-style": "solid"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M0'][effect >= 0]",
-      "css": {
-        "line-color": "#BAF798",
-        "target-arrow-color": "#BAF798",
-        "target-arrow-shape": "triangle",
-        "line-style": "solid"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
         "line-color": "#38A6A5",
         "target-arrow-color": "#38A6A5",
         "target-arrow-shape": "tee",
-        "line-style": "dotted"
+        "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
         "line-color": "#38A6A5",
         "target-arrow-color": "#38A6A5",
         "target-arrow-shape": "triangle",
-        "line-style": "dotted"
+        "line-style": "solid"
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
-        "line-color": "#5CBFBE",
-        "target-arrow-color": "#5CBFBE",
+        "line-color": "#66C8C7",
+        "target-arrow-color": "#66C8C7",
         "target-arrow-shape": "tee",
-        "line-style": "dotted"
+        "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
-        "line-color": "#5CBFBE",
-        "target-arrow-color": "#5CBFBE",
+        "line-color": "#66C8C7",
+        "target-arrow-color": "#66C8C7",
         "target-arrow-shape": "triangle",
-        "line-style": "dotted"
+        "line-style": "solid"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'NSCLC_BRCA'][effect < 0]",
       "css": {
-        "line-color": "#7AD9D8",
-        "target-arrow-color": "#7AD9D8",
+        "line-color": "#E17C05",
+        "target-arrow-color": "#E17C05",
         "target-arrow-shape": "tee",
-        "line-style": "dotted"
+        "line-style": "solid"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'NSCLC_BRCA'][effect >= 0]",
       "css": {
-        "line-color": "#7AD9D8",
-        "target-arrow-color": "#7AD9D8",
+        "line-color": "#E17C05",
+        "target-arrow-color": "#E17C05",
         "target-arrow-shape": "triangle",
-        "line-style": "dotted"
+        "line-style": "solid"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect < 0]",
-      "css": {
-        "line-color": "#98F4F3",
-        "target-arrow-color": "#98F4F3",
-        "target-arrow-shape": "tee",
-        "line-style": "dotted"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect >= 0]",
-      "css": {
-        "line-color": "#98F4F3",
-        "target-arrow-color": "#98F4F3",
-        "target-arrow-shape": "triangle",
-        "line-style": "dotted"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
         "line-color": "#5F4690",
         "target-arrow-color": "#5F4690",
@@ -363,7 +176,7 @@
         "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
         "line-color": "#5F4690",
         "target-arrow-color": "#5F4690",
@@ -372,126 +185,41 @@
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#8570B6",
-        "target-arrow-color": "#8570B6",
+        "line-color": "#937EC4",
+        "target-arrow-color": "#937EC4",
         "target-arrow-shape": "tee",
         "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#8570B6",
-        "target-arrow-color": "#8570B6",
+        "line-color": "#937EC4",
+        "target-arrow-color": "#937EC4",
         "target-arrow-shape": "triangle",
         "line-style": "dotted"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#AF9AE0",
-        "target-arrow-color": "#AF9AE0",
+        "line-color": "#CCB8FE",
+        "target-arrow-color": "#CCB8FE",
         "target-arrow-shape": "tee",
         "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#AF9AE0",
-        "target-arrow-color": "#AF9AE0",
+        "line-color": "#CCB8FE",
+        "target-arrow-color": "#CCB8FE",
         "target-arrow-shape": "triangle",
         "line-style": "dotted"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect < 0]",
-      "css": {
-        "line-color": "#D8C9FF",
-        "target-arrow-color": "#D8C9FF",
-        "target-arrow-shape": "tee",
-        "line-style": "dotted"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect >= 0]",
-      "css": {
-        "line-color": "#D8C9FF",
-        "target-arrow-color": "#D8C9FF",
-        "target-arrow-shape": "triangle",
-        "line-style": "dotted"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect < 0]",
-      "css": {
-        "line-color": "#E17C05",
-        "target-arrow-color": "#E17C05",
-        "target-arrow-shape": "tee",
-        "line-style": "dotted"
-        }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect >= 0]",
-      "css": {
-        "line-color": "#E17C05",
-        "target-arrow-color": "#E17C05",
-        "target-arrow-shape": "triangle",
-        "line-style": "dotted"
-
-      }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect < 0]",
-      "css": {
-        "line-color": "#FE9541",
-        "target-arrow-color": "#FE9541",
-        "target-arrow-shape": "tee",
-        "line-style": "dotted"
-        }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect >= 0]",
-      "css": {
-        "line-color": "#FE9541",
-        "target-arrow-color": "#FE9541",
-        "target-arrow-shape": "triangle",
-        "line-style": "dotted"
-
-      }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect < 0]",
-      "css": {
-        "line-color": "#FFBA96",
-        "target-arrow-color": "#FFBA96",
-        "target-arrow-shape": "tee",
-        "line-style": "dotted"
-        }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect >= 0]",
-      "css": {
-        "line-color": "#FFBA96",
-        "target-arrow-color": "#FFBA96",
-        "target-arrow-shape": "triangle",
-        "line-style": "dotted"
-
-      }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect < 0]",
-      "css": {
-        "line-color": "#FFDDCF",
-        "target-arrow-color": "#FFDDCF",
-        "target-arrow-shape": "tee",
-        "line-style": "dotted"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect >= 0]",
-      "css": {
-        "line-color": "#FFDDCF",
-        "target-arrow-color": "#FFDDCF",
-        "target-arrow-shape": "triangle",
-        "line-style": "dotted"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
         "line-color": "#73AF48",
         "target-arrow-color": "#73AF48",
@@ -499,7 +227,7 @@
         "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
         "line-color": "#73AF48",
         "target-arrow-color": "#73AF48",
@@ -508,126 +236,92 @@
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#8AC764",
-        "target-arrow-color": "#8AC764",
+        "line-color": "#92CE6D",
+        "target-arrow-color": "#92CE6D",
         "target-arrow-shape": "tee",
         "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#8AC764",
-        "target-arrow-color": "#8AC764",
+        "line-color": "#92CE6D",
+        "target-arrow-color": "#92CE6D",
         "target-arrow-shape": "triangle",
         "line-style": "dotted"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#A2DF7E",
-        "target-arrow-color": "#A2DF7E",
+        "line-color": "#B2EF8F",
+        "target-arrow-color": "#B2EF8F",
         "target-arrow-shape": "tee",
         "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M1'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#A2DF7E",
-        "target-arrow-color": "#A2DF7E",
+        "line-color": "#B2EF8F",
+        "target-arrow-color": "#B2EF8F",
         "target-arrow-shape": "triangle",
         "line-style": "dotted"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect < 0]",
-      "css": {
-        "line-color": "#BAF798",
-        "target-arrow-color": "#BAF798",
-        "target-arrow-shape": "tee",
-        "line-style": "dotted"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M1'][effect >= 0]",
-      "css": {
-        "line-color": "#BAF798",
-        "target-arrow-color": "#BAF798",
-        "target-arrow-shape": "triangle",
-        "line-style": "dotted"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
         "line-color": "#38A6A5",
         "target-arrow-color": "#38A6A5",
         "target-arrow-shape": "tee",
-        "line-style": "dashed"
+        "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
         "line-color": "#38A6A5",
         "target-arrow-color": "#38A6A5",
         "target-arrow-shape": "triangle",
-        "line-style": "dashed"
+        "line-style": "dotted"
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#5CBFBE",
-        "target-arrow-color": "#5CBFBE",
+        "line-color": "#66C8C7",
+        "target-arrow-color": "#66C8C7",
         "target-arrow-shape": "tee",
-        "line-style": "dashed"
+        "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#5CBFBE",
-        "target-arrow-color": "#5CBFBE",
+        "line-color": "#66C8C7",
+        "target-arrow-color": "#66C8C7",
         "target-arrow-shape": "triangle",
-        "line-style": "dashed"
+        "line-style": "dotted"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'NSCLC_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#7AD9D8",
-        "target-arrow-color": "#7AD9D8",
+        "line-color": "#E17C05",
+        "target-arrow-color": "#E17C05",
         "target-arrow-shape": "tee",
-        "line-style": "dashed"
+        "line-style": "dotted"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'NSCLC_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#7AD9D8",
-        "target-arrow-color": "#7AD9D8",
+        "line-color": "#E17C05",
+        "target-arrow-color": "#E17C05",
         "target-arrow-shape": "triangle",
-        "line-style": "dashed"
+        "line-style": "dotted"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect < 0]",
-      "css": {
-        "line-color": "#98F4F3",
-        "target-arrow-color": "#98F4F3",
-        "target-arrow-shape": "tee",
-        "line-style": "dashed"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect >= 0]",
-      "css": {
-        "line-color": "#98F4F3",
-        "target-arrow-color": "#98F4F3",
-        "target-arrow-shape": "triangle",
-        "line-style": "dashed"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
       "css": {
         "line-color": "#5F4690",
         "target-arrow-color": "#5F4690",
@@ -635,7 +329,7 @@
         "line-style": "dashed"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
       "css": {
         "line-color": "#5F4690",
         "target-arrow-color": "#5F4690",
@@ -644,126 +338,41 @@
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#8570B6",
-        "target-arrow-color": "#8570B6",
+        "line-color": "#937EC4",
+        "target-arrow-color": "#937EC4",
         "target-arrow-shape": "tee",
         "line-style": "dashed"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#8570B6",
-        "target-arrow-color": "#8570B6",
+        "line-color": "#937EC4",
+        "target-arrow-color": "#937EC4",
         "target-arrow-shape": "triangle",
         "line-style": "dashed"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#AF9AE0",
-        "target-arrow-color": "#AF9AE0",
+        "line-color": "#CCB8FE",
+        "target-arrow-color": "#CCB8FE",
         "target-arrow-shape": "tee",
         "line-style": "dashed"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#AF9AE0",
-        "target-arrow-color": "#AF9AE0",
+        "line-color": "#CCB8FE",
+        "target-arrow-color": "#CCB8FE",
         "target-arrow-shape": "triangle",
         "line-style": "dashed"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect < 0]",
-      "css": {
-        "line-color": "#D8C9FF",
-        "target-arrow-color": "#D8C9FF",
-        "target-arrow-shape": "tee",
-        "line-style": "dashed"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect >= 0]",
-      "css": {
-        "line-color": "#D8C9FF",
-        "target-arrow-color": "#D8C9FF",
-        "target-arrow-shape": "triangle",
-        "line-style": "dashed"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect < 0]",
-      "css": {
-        "line-color": "#E17C05",
-        "target-arrow-color": "#E17C05",
-        "target-arrow-shape": "tee",
-        "line-style": "dashed"
-        }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect >= 0]",
-      "css": {
-        "line-color": "#E17C05",
-        "target-arrow-color": "#E17C05",
-        "target-arrow-shape": "triangle",
-        "line-style": "dashed"
-
-      }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect < 0]",
-      "css": {
-        "line-color": "#FE9541",
-        "target-arrow-color": "#FE9541",
-        "target-arrow-shape": "tee",
-        "line-style": "dashed"
-        }
-    },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect >= 0]",
-      "css": {
-        "line-color": "#FE9541",
-        "target-arrow-color": "#FE9541",
-        "target-arrow-shape": "triangle",
-        "line-style": "dashed"
-
-      }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect < 0]",
-      "css": {
-        "line-color": "#FFBA96",
-        "target-arrow-color": "#FFBA96",
-        "target-arrow-shape": "tee",
-        "line-style": "dashed"
-        }
-    },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect >= 0]",
-      "css": {
-        "line-color": "#FFBA96",
-        "target-arrow-color": "#FFBA96",
-        "target-arrow-shape": "triangle",
-        "line-style": "dashed"
-
-      }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect < 0]",
-      "css": {
-        "line-color": "#FFDDCF",
-        "target-arrow-color": "#FFDDCF",
-        "target-arrow-shape": "tee",
-        "line-style": "dashed"
-        }
-    },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect >= 0]",
-      "css": {
-        "line-color": "#FFDDCF",
-        "target-arrow-color": "#FFDDCF",
-        "target-arrow-shape": "triangle",
-        "line-style": "dashed"
-
-      }
-    },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
       "css": {
         "line-color": "#73AF48",
         "target-arrow-color": "#73AF48",
@@ -771,7 +380,7 @@
         "line-style": "dashed"
         }
     },{
-      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
       "css": {
         "line-color": "#73AF48",
         "target-arrow-color": "#73AF48",
@@ -780,52 +389,86 @@
 
       }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#8AC764",
-        "target-arrow-color": "#8AC764",
+        "line-color": "#92CE6D",
+        "target-arrow-color": "#92CE6D",
         "target-arrow-shape": "tee",
         "line-style": "dashed"
         }
     },{
-      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'diffcoex'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#8AC764",
-        "target-arrow-color": "#8AC764",
+        "line-color": "#92CE6D",
+        "target-arrow-color": "#92CE6D",
         "target-arrow-shape": "triangle",
         "line-style": "dashed"
 
       }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#A2DF7E",
-        "target-arrow-color": "#A2DF7E",
+        "line-color": "#B2EF8F",
+        "target-arrow-color": "#B2EF8F",
         "target-arrow-shape": "tee",
         "line-style": "dashed"
         }
     },{
-      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#A2DF7E",
-        "target-arrow-color": "#A2DF7E",
+        "line-color": "#B2EF8F",
+        "target-arrow-color": "#B2EF8F",
         "target-arrow-shape": "triangle",
         "line-style": "dashed"
 
       }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect < 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
       "css": {
-        "line-color": "#BAF798",
-        "target-arrow-color": "#BAF798",
+        "line-color": "#38A6A5",
+        "target-arrow-color": "#38A6A5",
         "target-arrow-shape": "tee",
         "line-style": "dashed"
         }
     },{
-      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'M2'][effect >= 0]",
+      "selector": "edge[tool = 'boostdiff'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
       "css": {
-        "line-color": "#BAF798",
-        "target-arrow-color": "#BAF798",
+        "line-color": "#38A6A5",
+        "target-arrow-color": "#38A6A5",
+        "target-arrow-shape": "triangle",
+        "line-style": "dashed"
+
+      }
+    },{
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
+      "css": {
+        "line-color": "#66C8C7",
+        "target-arrow-color": "#66C8C7",
+        "target-arrow-shape": "tee",
+        "line-style": "dashed"
+        }
+    },{
+      "selector": "edge[tool = 'zscores'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
+      "css": {
+        "line-color": "#66C8C7",
+        "target-arrow-color": "#66C8C7",
+        "target-arrow-shape": "triangle",
+        "line-style": "dashed"
+
+      }
+    },{
+      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'BRCA_PRAD'][effect < 0]",
+      "css": {
+        "line-color": "#E17C05",
+        "target-arrow-color": "#E17C05",
+        "target-arrow-shape": "tee",
+        "line-style": "dashed"
+        }
+    },{
+      "selector": "edge[tool = 'grnboost2'][interaction = ''][key = 'BRCA_PRAD'][effect >= 0]",
+      "css": {
+        "line-color": "#E17C05",
+        "target-arrow-color": "#E17C05",
         "target-arrow-shape": "triangle",
         "line-style": "dashed"
 
@@ -841,13 +484,13 @@
                        {
                          "selector": "node[value <= 0]",
                          "css": {
-                           "background-color": "mapData(value, -5, 0, green, white)"
+                           "background-color": "mapData(value, -2, 0, green, white)"
                          }
                        },
                        {
                          "selector": "node[value > 0]",
                          "css": {
-                           "background-color": "mapData(value, 0, 10, white, red)"
+                           "background-color": "mapData(value, 0, 5, white, red)"
                          }
                        }
                      ]

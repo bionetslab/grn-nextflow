@@ -31,7 +31,7 @@ require(presto)
 ################################################################################
 
 source('style_generator.R')
-
+source('auxiliary_functions.R')
 
 option_list <- list(
   make_option(
@@ -92,27 +92,65 @@ option_list <- list(
 )
 # changing opt$grntoools and opt$dgrntools to be suitable as input for the Shiny app
 opt <- parse_args(OptionParser(option_list = option_list))
-
-
-
-
-# loading the modified network3d lib
-# library(networkD3, lib.loc=sprintf("%s/lib", opt$project.path))
 metacells <- opt$metacells
+if (opt$grntools != "No tools were chosen for GRN Inference") {
+  opt$grntools <- c("NA", opt$grntools)
+}
+
+# metacells<-FALSE
 # opt$results.path <-
 #   "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
-# opt$selection <-
-#   "NSCLC_BRCA,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_BRCA,RNA,cluster_type,BRCA_M0,BRCA_M0-NSCLC_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_PRAD,RNA,cluster_type,BRCA_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-BRCA_PRAD,RNA,cluster_type,PRAD_M0,PRAD_M0"
+# opt$selection <-"NSCLC_BRCA,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_BRCA,RNA,cluster_type,BRCA_M0,BRCA_M0-NSCLC_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_PRAD,RNA,cluster_type,PRAD_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,BRCA_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,PRAD_M0,PRAD_M0"
 # opt$seurat.file <-
 #   "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
 # opt$dgrntools <- "boostdiff,zscores,diffcoex"
 # opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
 # opt$grntools <- "grnboost2"
-if (opt$grntools != "No tools were chosen for GRN Inference") {
-  opt$grntools <- c("NA", opt$grntools)
-}
-# opt$m <- "seurat"
+# 
 
+# opt$results.path <-
+#   "/home/bionets-og86asub/Documents/netmap/data/misc/"
+# opt$selection <-"C5_C8,SCT,cluster:genotype,C8_WT,8:wt-C5_C8,SCT,cluster:genotype,C8_KO,8:ko"
+# opt$seurat.file <-
+#   "/home/bionets-og86asub/Documents/netmap/data/misc/ko_vs_wt.rds"
+# opt$dgrntools <- "boostdiff,zscores,diffcoex"
+# opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
+# opt$grntools <- "grnboost2"
+# opt$assay<-'SCT'
+
+
+# parse selection
+selections <-sapply(strsplit(opt$selection, "-")[[1]], function(x) {strsplit(x, ",")[[1]]})
+selections <- as.data.table(rbind(t(selections)))
+colnames(selections) <- c("key", "assay", "group_var", "condition", "variables")
+
+all_networks<-read_all_networks(selections, opt$results.path)
+color.map<-make_color_map(all_networks, selections)
+
+
+  
+
+########### Loading Seurat object, filtering the correct cells and performing differential testing
+adata <- readRDS(opt$seurat.file)
+# saves a bit of computation time
+gene_names <- rownames(adata)
+capitalized_gene_names <- toupper(gene_names)
+# adata <- adata$all
+
+group.var <- selections$group_var[1]
+merge_cols<-str_split(group.var, ':')[[1]]
+df <- as.data.table(adata@meta.data) %>% 
+  unite(x, merge_cols, sep = ":", remove = FALSE)
+adata@meta.data[[group.var]]<-df$x
+  
+if (metacells){
+metacell.seurat<-read_metacell_files(selections)
+print(metacell.seurat)
+}
+  
+Idents(adata) <- group.var
+
+<<<<<<< HEAD
 create_graph <- function(all_networks, de.genes = NULL) {
   nodes <-
     data.table(
@@ -120,33 +158,19 @@ create_graph <- function(all_networks, de.genes = NULL) {
       tool = c(all_networks$tool, all_networks$tool),
       keys = c(all_networks$key, all_networks$key)
     )
+=======
+# get all factors and columns that were used in the selection but were not of class factor
+factors <- unique(c(names(which(sapply(adata@meta.data, class)=='factor')), selections$group_var[1]))
+factors<-intersect(factors, colnames(adata@meta.data))
+>>>>>>> c903c443582958ff11f589676d4faa83c76c17b7
 
-  # Necessary because key is reserved keywort in df.
-  colnames(nodes)<-c('id', 'tool', 'key')
-  nodes <- unique(nodes)
-  if (!is.null(de.genes)) {
-    nodes <-
-      merge(nodes,
-            de.genes,
-            by.x = "id",
-            by.y = "gene",
-            all.x = TRUE
-      )
-  }
-  edges <- all_networks
-  colnames(edges) <-
-    c(
-      "target",
-      "source",
-      "weight",
-      "interaction",
-      "effect",
-      "tool",
-      "key"
-    )
-  return(list(nodes, edges))
-}
+Idents(adata) <- group.var
+de.genes <- FindAllMarkers(adata)
+de.genes$name <- as.character(de.genes$cluster)
+colnames(de.genes)[2] <- "value"
+#de.genes<-NULL
 
+<<<<<<< HEAD
 read_files <- function(file_list, key) {
   all_data <- list()
   
@@ -320,47 +344,27 @@ if (opt$mode == "tsv") {
     
   color.map<-make_color_map(all_networks)
 
-  # Generate the style JSON
-  style_json <- generate_style_json(color.map$tool, color.map$value, color.map$condition, color.map$key, color.map$arrow_style, color.map$dash.style)
-  # Write the style JSON to a file
-  writeLines(style_json, "style.js")
-  
-  
-  ########### Loading Seurat object, filtering the correct cells and performing differential testing
-  adata <- readRDS(opt$seurat.file)
-  # saves a bit of computation time
-  gene_names <- rownames(adata)
-  capitilized_gene_names <- toupper(gene_names)
-  # adata <- adata$all
-  
-  group.var <- selections$group_var[1]
-  Idents(adata) <- group.var
+# get all factors and columns that were used in the selection but were not of class factor
+factors <- unique(c(names(which(sapply(adata@meta.data, class)=='factor')), selections$group_var[1]))
+factors<-intersect(factors, colnames(adata@meta.data))
 
-  # get all factors and columns that were used in the selection but were not of class factor
-  factors <- unique(c(names(which(sapply(adata@meta.data, class)=='factor')), selections$group_var[1]))
-  # get all unique values for the factors
-  factor_vals <- sapply(factors, function(factor) { unique(unlist(adata@meta.data[, factor], recursive = FALSE)) })
-  # remove the levels from the entries that are factors
-  factor_vals <- sapply(factor_vals, function(x) { if(class(x) == 'factor') { droplevels(x) } else { x }})
-  # add name of factor as key to the values (needed for identification inside of shiny)
-  factor_vals <- sapply(names(factor_vals), function(name) { paste0(rep(name, length(factor_vals[[name]])), ': ', factor_vals[[name]])})
-  
-  
-  Idents(adata) <- group.var
-  de.genes <- FindAllMarkers(adata)
-  de.genes$gene <- rownames(de.genes)
-  de.genes$name <- as.character(de.genes$cluster)
-  colnames(de.genes)[2] <- "value"
-  
+Idents(adata) <- group.var
+de.genes <- FindAllMarkers(adata)
+de.genes$name <- as.character(de.genes$cluster)
+colnames(de.genes)[2] <- "value"
+#de.genes<-NULL
+
   # 
-  graph <- create_graph(all_networks, de.genes)
-  nodes <- graph[[1]]
-  edges <- graph[[2]]
-}
-
-basicStyleFile <- "style.js"
+graph <- create_graph(all_networks, de.genes)
+nodes <- graph[[1]]
+edges <- graph[[2]]
 
 # SET INPUT OPTIONS ----
+# Generate the style JSON
+style_json <- generate_style_json(color.map$tool, color.map$value, color.map$condition, color.map$key, color.map$arrow_style, color.map$dash.style)
+# Write the style JSON to a file
+writeLines(style_json, "style.js")
+basicStyleFile <- "style.js"
 styleList <- c("", "Basic" = "basicStyleFile")
 
 
@@ -405,8 +409,8 @@ ui <- shinyUI(fluidPage(
                 ),
                 selectInput('selectCondition', 
                             'Select Condition',
-                            choices = unique(all_networks$interaction),
-                            selected = unique(all_networks$interaction)[1],
+                            choices = unique(c(all_networks$interaction, selections$condition)),
+                            selected = unique(selections$condition)[1],
                             multiple = TRUE,
                             selectize = TRUE,
                             width = NULL,
@@ -603,10 +607,13 @@ server <- function(input, output, session) {
     d <- isolate(input$DiffGRN_pick)
     c <- isolate(input$selectCondition)
     n.edges <- isolate(input$n.edges)
-    
+    print(c)
     edges <- edges %>% group_by(tool, key) %>% slice_max(n = n.edges, weight) %>% as.data.table()
     edges<-edges[(tool %in% d) & (key %in% k) & (interaction %in% c)]
-    color.map(make_color_map(edges))
+    if (nrow(edges)<=0){
+      return(NULL)
+    }
+    color.map(make_color_map(edges, selections))
     # Generate the style JSON
     style_json <- generate_style_json(color.map()$tool, color.map()$value, color.map()$interaction, color.map()$key, color.map()$arrow_style, color.map()$dash.style)
     # Write the style JSON to a file
@@ -768,7 +775,7 @@ server <- function(input, output, session) {
       paste(newNodes)
     })
     
-    input_gene_names <- sapply(toupper(input$selectedNodes), function(x) gene_names[grep(paste0("^", x, "$"), capitilized_gene_names)])
+    input_gene_names <- sapply(toupper(input$selectedNodes), function(x) gene_names[grep(paste0("^", x, "$"), capitalized_gene_names)])
     input_gene_names <- as.character(input_gene_names)
     
     edit <- isolate(input$select_genes)
@@ -805,38 +812,22 @@ server <- function(input, output, session) {
     tagList(sprintf("%s: ", input$selectedNodes[1]), url)
   })
   
-  # loads the data of the uploadable gene list
-  observeEvent(input$comparison_grn_file, {
-    comparison_network <-
-      read.table(input$comparison_grn_file$datapath,
-                 sep = ",",
-                 header = TRUE
-      )[, 2:3]
-    comparison_nodes <-
-      unique(c(comparison_network[, 1], comparison_network[, 2]))
-    displayed_network$fn$x$links$existsInComparisonGRN <-
-      do.call(paste0, displayed_network$links[, 1:2]) %in% do.call(paste0, comparison_network)
-    displayed_network$fn$x$nodes$existsInComparisonGRN <-
-      displayed_network$fn$x$nodes$name %in% comparison_nodes
-  })
-  
-  # observer events for showing the overlap (node, edges) of the uploadable gene list and the displayed network
-  observeEvent(input$comparison_grn_switch_edges, {
-    if (is.null(input$comparison_grn_file)) {
-      return(NULL)
-    }
-    displayed_network$fn$x$links$comparisonGRNSwitch <-
-      input$comparison_grn_switch_edges
-  })
+
+
   
   observeEvent(input$selectCondition, {
     k <- isolate(input$Key_pick)
     d <- isolate(input$DiffGRN_pick)
     c <- isolate(input$selectCondition)
+    print(c)
     n.edges <- isolate(input$n.edges)
     edges<-edges[(tool %in% d) & (key %in% k) & (interaction %in% c)]
-    color.map(make_color_map(edges))
-    
+    if (nrow(edges)<=0){
+      return(NULL)
+    }
+    color.map(make_color_map(edges, selections))
+    print(color.map())
+    print('Legend')
     output$legend<-renderPlot({
       ggplot(color.map()[tool %in% d], aes(x = interaction, y = tool, fill = value)) +
         geom_tile(color = "white") +
@@ -847,25 +838,21 @@ server <- function(input, output, session) {
         guides(fill = FALSE)  # Hide the legend + facet_wrap(~key)
     })
   })
-  
-  observeEvent(input$comparison_grn_switch_nodes, {
-    if (is.null(input$comparison_grn_file)) {
-      return(NULL)
-    }
-    displayed_network$fn$x$nodes$comparisonGRNSwitch <-
-      input$comparison_grn_switch_nodes
-  })
-  
+
   # function for plotting a linear model of two conditions given the x,y expression data of both
   # plot_linear_model <- function(expr1_x, expr1_y, expr2_x, expr2_y, conditions) {
   plot_linear_model <- function(df, source, target) {
-    print(df)
-    mapped_cols <- unique(df$cols)
-    names(mapped_cols) <- unique(df$Condition)
+    cm<-merge(color.map(), selections, by.x = c('key', 'interaction'), by.y = c('key', 'condition'))
+    cm<-cm[key %in%  isolate(input$Key_pick)]
+    cm<-cm[!duplicated(cm[, .(key, variables)])]
+    
+    cols<-cm$value
+    names(cols)<-cm$variables
+    
     title <-'Linear model'
     plot <- ggplot(df, aes(x = x, y = y, colour = Condition)) +
       geom_point() +
-      scale_colour_manual(values = mapped_cols) +
+      scale_colour_manual(values = cols) +
       geom_smooth(
         method = "lm",
         formula = "y ~ x",
@@ -890,11 +877,15 @@ server <- function(input, output, session) {
   
   get_expression_data<-function(source, target, conditions, adata){
     elist<-list()
-
+    
+    conds<-isolate(input$selectCondition)
+    conditions<-unique(selections[condition %in% conds]$variables)
+    
+    print(conditions)
     for (co in conditions){
       if (co %in% unique(adata@meta.data[, group.var])){
       e<-FetchData(object = adata, vars = group.var)
-      expr1 <-as.data.table(t(as.matrix(adata[, which(e==co)][c(source, target)]@assays$RNA@counts)))
+      expr1 <-as.data.table(t(as.matrix(adata[, which(e==co)][c(source, target)]@assays$RNA@layers$counts)))
       expr1$condition <- co
       elist[[co]]<-expr1
     }
@@ -913,9 +904,18 @@ server <- function(input, output, session) {
       as.data.table()
     expression <- merge(expression,stats, by.x = c("condition", "name"), by.y = c("condition", "gene"))
     expression[, outlier := ifelse(value > (mean + 2 * std), "outlier", "normal")]
-    colors<-get_color(color.map(), t= isolate(input$DiffGRN_pick[1]))
-    print(colors)
-    expression$color<-sapply(expression$condition, function(x) colors[x])
+
+    key <- isolate(input$Key_pick)
+    
+    print('Generating colors')
+    cm<-merge(color.map(), selections, by.x = c('key', 'interaction'), by.y = c('key', 'condition'))
+    cm<-cm[key %in%  isolate(input$Key_pick)]
+    cm<-cm[!duplicated(cm[, .(key, variables)])]
+    
+    cols<-cm$value
+    names(cols)<-cm$variables
+    
+    expression$color<-sapply(expression$condition, function(x) cols[x])
     expression <- expression[outlier != "outlier"]
     expression <-
       expression %>%
@@ -952,12 +952,15 @@ server <- function(input, output, session) {
     }
     
     conditions <- isolate(input$selectCondition)
-    
+    print(conditions)
     if (!metacells) {
       expression<-get_expression_data(source, target, conditions, adata)
     }
     else{
-      print('FAAAIIIL')
+
+
+      expression<-get_expression_data(source, target, conditions, metacell.seurat)
+      print(expression)
     }
     # expr1_x <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == source, -1])
     # expr1_y <- as.numeric(displayed_network$cond1_metacells_data[displayed_network$cond1_metacells_data$Gene == target, -1])
@@ -1040,132 +1043,49 @@ server <- function(input, output, session) {
     )
   }
   
-  # Comparison violin and linear model plots if a filter was set
+
   
-  meta_cell_creation <- function(subset) {
-    n.samples <- 100
-    p.missing <- 10
-    n.cells <- nrow(subset@meta.data)
-    # Compute number of cells to aggregate
-    cells.p.metasample <- nrow(subset@meta.data) / opt$n.samples
-    # randomly assign each of the cells to a group
-    set.seed(1)
-    subset@meta.data$meta.cell <-
-      sample(
-        nrow(subset@meta.data),
-        size = nrow(subset@meta.data),
-        replace = FALSE
-      ) %% opt$n.samples
-    # Set the ident to the newly created meta.cell variable
-    Idents(subset) <- "meta.cell"
-    # Aggregate the expression
-    agg <-
-      AggregateExpression(
-        subset,
-        slot = "counts",
-        return.seurat = T,
-        assays = configuration[configuration$key == input$Key_pick]$assay
-      )
-    agg@assays[[opt$assay]]@counts <-
-      agg@assays[[opt$assay]]@counts / cells.p.metasample
-    
-    agg <- NormalizeData(agg)
-    result.data.frame <- agg@assays[[opt$assay]]@data
-    
-    row.names <- rownames(result.data.frame)
-    column.names <-
-      paste0(
-        paste0(input$Key_pick, collapse = "_"),
-        "_",
-        colnames(result.data.frame)
-      )
-    result.data.frame <- as.data.table(result.data.frame)
-    result.data.frame <- cbind(row.names, result.data.frame)
-    colnames(result.data.frame) <- c("Gene", column.names)
-    select <-
-      which(rowSums(result.data.frame == 0) / (ncol(result.data.frame) - 1) <
-              (opt$p.missing / 100))
-    result.data.frame <- result.data.frame[select, ]
-    result.data.frame$Gene <- toupper(result.data.frame$Gene)
-    return(result.data.frame)
-  }
   
-  comparison_linear_model_plot <-
-    eventReactive(input$compare_button, {
-      if (opt$mode == "tsv" ||
-          is.null(input$id_source) || is.null(input$id_target)) {
-        return(NULL)
-      }
-      comp_selec1 <- input$comp_selec_cond1
-      comp_selec2 <- input$comp_selec_cond2
-      cond_name1 <- input$comp_name_cond1
-      cond_name2 <- input$comp_name_cond2
-      conditition_names <- c(cond_name1, cond_name2)
-      
-      comp_select.cells <-
-        get_comp_selections(comp_selec1, comp_selec2)
-      comp1_select.cells <- comp_select.cells[[1]]
-      comp2_select.cells <- comp_select.cells[[2]]
-      
-      comp1_subset <- subset(adata, cells = comp1_select.cells)
-      comp2_subset <- subset(adata, cells = comp2_select.cells)
-      
-      comp1_meta_cell_df <- meta_cell_creation(comp1_subset)
-      comp2_meta_cell_df <- meta_cell_creation(comp2_subset)
-      
-      df_gene_names <-
-        intersect(comp1_meta_cell_df$Gene, comp2_meta_cell_df$Gene)
-      comp1_meta_cell_df <-
-        comp1_meta_cell_df[Gene %in% df_gene_names]
-      comp2_meta_cell_df <-
-        comp2_meta_cell_df[Gene %in% df_gene_names]
-      
-      comp1_meta_cell_df$Gene <- toupper(comp1_meta_cell_df$Gene)
-      comp2_meta_cell_df$Gene <- toupper(comp2_meta_cell_df$Gene)
-      
-      expr1_x <-
-        as.numeric(comp1_meta_cell_df[Gene == toupper(isolate(input$id_source)), -1])
-      expr1_y <-
-        as.numeric(comp1_meta_cell_df[Gene == toupper(isolate(input$id_target)), -1])
-      expr2_x <-
-        as.numeric(comp2_meta_cell_df[Gene == toupper(isolate(input$id_source)), -1])
-      expr2_y <-
-        as.numeric(comp2_meta_cell_df[Gene == toupper(isolate(input$id_target)), -1])
-      
-      # outlier detection
-      res <- plot_linear_model(expr1_x, expr1_y, expr2_x, expr2_y)
-      output$downloadGRNLinearModelPlot <-
-        download_plot(res[[1]], res[[2]])
-      
-      res[[1]]
-    })
   
   # Violin and linear model plot for the shown DiffGRN
   output$violin_plot <- renderPlot({
-    if (is.null(input$selectedNodes[1]) || opt$mode == "tsv") {
+    print('Violin plot')
+    if (is.null(input$selectedNodes[1])) {
+      print('No nodes selected')
       return(NULL)
     }
+    print('null')
     key <- isolate(input$Key_pick)
-    condition_names <-
-      unique(selections[key %in% isolate(input$Key_pick)]$condition)[1:2]
 
-    cols <-get_color(color.map(), t= isolate(input$DiffGRN_pick[1]))
-    conds<-isolate(input$selectCondition)
-    input_gene_name <-
-      gene_names[grep(paste0("^", toupper(input$selectedNodes[1]), "$"), capitilized_gene_names)]
+    print('Generating colors')
+    cm<-merge(color.map(), selections, by.x = c('key', 'interaction'), by.y = c('key', 'condition'))
+    print(cm)
+    cm<-cm[key %in%  isolate(input$Key_pick)]
+    cm<-cm[!duplicated(cm[, .(key, variables)])]
+
+    cols<-cm$value
+    names(cols)<-cm$variables
+    
+    print('probelm')
+    gn<-isolate(input$selectedNodes)[1]
+    
+    input_gene_name <- gene_names[grep(paste0("^", toupper(gn), "$"), capitalized_gene_names)]
+    print(input_gene_name)
     plot <-
       VlnPlot(adata,
               features = input_gene_name,
               #group.by = group_var,
-              idents = conds,
-              cols = cols
-      ) + theme(legend.position = "bottom")
+              idents = cm$variables,
+              cols = cols,
+              assay = opt$assay)+
+      theme(legend.position = "bottom")
+
     output$downloadGRNViolinPlot <-
       download_plot(
         plot,
         sprintf(
           "%s || %s vs. %s",
-          input$selectedNodes[1],
+          isolate(input$selectedNodes)[1],
           condition_names[1],
           condition_names[2]
         )
@@ -1173,10 +1093,6 @@ server <- function(input, output, session) {
     plot
   })
   
-  output$comparison_linear_model_plot <-
-    renderPlot({
-      comparison_linear_model_plot()
-    })
   
   # function for downloading a plot
   download_plot <- function(plot, filename) {

@@ -114,13 +114,13 @@ generate_style_json <- function(tools, colors, conditions, keys, arrow_styles, d
                        {
                          "selector": "node[value <= 0]",
                          "css": {
-                           "background-color": "mapData(value, -5, 0, green, white)"
+                           "background-color": "mapData(value, -2, 0, green, white)"
                          }
                        },
                        {
                          "selector": "node[value > 0]",
                          "css": {
-                           "background-color": "mapData(value, 0, 10, white, red)"
+                           "background-color": "mapData(value, 0, 5, white, red)"
                          }
                        }
                      ]')
