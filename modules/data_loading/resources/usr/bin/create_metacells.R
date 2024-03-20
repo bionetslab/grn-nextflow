@@ -121,16 +121,19 @@ if (opt$mode == "seurat" || opt$mode == "anndata") {
     # Set the ident to the newly created meta.cell variable
     Idents(subset)<-"meta.cell"
     # Aggregate the count expression
-    agg<-AggregateExpression(subset, slot = "counts", return.seurat = T, assays = opt$assay)
-    agg[[opt$assay]]@counts <- agg[[opt$assay]]@counts / cells.p.metasample
+    print('Aggregating expression')
+    agg<-AggregateExpression(subset, return.seurat = T, assays = opt$assay)
+    print('Aggregation done')
+    agg[[opt$assay]]@layers$counts <- agg[[opt$assay]]@layers$counts / cells.p.metasample
+  print('Normalizing')
     agg <- NormalizeData(agg)
   } else {
     agg <- NormalizeData(subset)
   }
-  result.data.frame <- agg[[opt$assay]]@data
+  result.data.frame <- agg[[opt$assay]]@layers$data
   
-  row.names<-rownames(result.data.frame)
-  column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(result.data.frame))
+  row.names<-rownames(agg)
+  column.names<-paste0(paste0(opt$key, collapse='_'), '_', colnames(agg))
   result.data.frame<-as.data.table(result.data.frame)
   result.data.frame<-cbind(row.names, result.data.frame)
   colnames(result.data.frame)<-c('Gene', column.names)
