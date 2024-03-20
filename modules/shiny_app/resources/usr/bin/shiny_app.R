@@ -96,17 +96,17 @@ metacells <- opt$metacells
 if (opt$grntools != "No tools were chosen for GRN Inference") {
   opt$grntools <- c("NA", opt$grntools)
 }
-
-metacells<-FALSE
-opt$results.path <-
-  "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
-opt$selection <-"NSCLC_BRCA,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_BRCA,RNA,cluster_type,BRCA_M0,BRCA_M0-NSCLC_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_PRAD,RNA,cluster_type,PRAD_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,BRCA_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,PRAD_M0,PRAD_M0"
-opt$seurat.file <-
-  "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
-opt$dgrntools <- "boostdiff,zscores,diffcoex"
-opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
-opt$grntools <- "grnboost2"
 # 
+# metacells<-FALSE
+# opt$results.path <-
+#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/"
+# opt$selection <-"NSCLC_BRCA,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_BRCA,RNA,cluster_type,BRCA_M0,BRCA_M0-NSCLC_PRAD,RNA,cluster_type,NSCLC_M0,NSCLC_M0-NSCLC_PRAD,RNA,cluster_type,PRAD_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,BRCA_M0,BRCA_M0-BRCA_PRAD,RNA,cluster_type,PRAD_M0,PRAD_M0"
+# opt$seurat.file <-
+#   "/home/bionets-og86asub/Documents/external_analyses/huiqin/cancer.rds"
+# opt$dgrntools <- "boostdiff,zscores,diffcoex"
+# opt$dgrntools <- c(strsplit(opt$dgrntools, ",")[[1]])
+# opt$grntools <- "grnboost2"
+# # 
 
 # opt$results.path <-
 #   "/home/bionets-og86asub/Documents/netmap/data/misc/"
@@ -149,200 +149,6 @@ print(metacell.seurat)
 }
   
 Idents(adata) <- group.var
-
-<<<<<<< HEAD
-create_graph <- function(all_networks, de.genes = NULL) {
-  nodes <-
-    data.table(
-	      id = c(all_networks$target, all_networks$source),
-      tool = c(all_networks$tool, all_networks$tool),
-      keys = c(all_networks$key, all_networks$key)
-    )
-=======
-# get all factors and columns that were used in the selection but were not of class factor
-factors <- unique(c(names(which(sapply(adata@meta.data, class)=='factor')), selections$group_var[1]))
-factors<-intersect(factors, colnames(adata@meta.data))
->>>>>>> c903c443582958ff11f589676d4faa83c76c17b7
-
-Idents(adata) <- group.var
-de.genes <- FindAllMarkers(adata)
-de.genes$name <- as.character(de.genes$cluster)
-colnames(de.genes)[2] <- "value"
-#de.genes<-NULL
-
-<<<<<<< HEAD
-read_files <- function(file_list, key) {
-  all_data <- list()
-  
-  for (file in file_list) {
-    tryCatch(
-      {
-        data <- fread(file)
-        if (!is.null(data) && nrow(data) > 0) {
-          data$tool <- basename(dirname(file))
-          data$key <- basename(dirname(dirname(file)))
-          all_data[[basename(dirname(file))]] <- data
-        } else {
-          print("Data empty")
-        }
-      },
-      error = function(e) {
-        cat("Error reading", file, ": ", conditionMessage(e), "\n")
-      }
-    )
-  }
-  all_data <- rbindlist(all_data)
-  return(all_data)
-}
-
-make_color_map<-function(all_networks){
-  print('Generating colors')
-  n.colors<-nrow(unique(all_networks[, .(interaction)]))
-  color.pal<-rcartocolor::carto_pal(n=max(3, 2*n.colors), 'Prism')
-  color.pal<-color.pal[seq(1, 2*n.colors, 2)]
- 
-  color.df<-data.table(color.pal[1:n.colors], unique(all_networks[, .(interaction)]))
-  colnames(color.df)<-c('color', 'interaction')
-  color.df<-color.df %>% pivot_longer(-c('interaction'))
-  print(color.df)
-  combos<-unique(all_networks[, .(interaction, tool)])
-  print(combos)
-  #combos<-unique(cross_join(combos, combos)[,.(interaction.x,tool.y)])
-  colnames(combos)<-c('interaction', 'tool')
-  print(combos)
-  combos<-merge(combos, color.df, by = 'interaction', allow.cartesian=T)
-  combos<-combos %>% group_by(interaction) %>% mutate(row_count = row_number()) %>% as.data.table()
-  combos$value<-sapply(1:nrow(combos), function(i) lighten(combos$value[i], (combos$row_count[i]-1)*(1/max(combos$row_count)))) 
-  combos<-as.data.table(combos)
-  combos<-combos[, .(tool, interaction, value)]
-  
-  cl<-list()
-  possible_styles<-c('solid', 'dotted', 'dashed')
-  dashes<- ceiling(sqrt(length(unique(all_networks$key))-1))
-  #dash.styles<-c('NA', 'NA',as.character(sapply(1:dashes, function(x) sapply(1:3, function(y) paste0('[', 2*x, ', ', 2*y, ']')))))
-  #dash.width<- c('NA', 'NA', sapply(1:dashes, function(x) sapply(1:3, function(y) 2*x)))
-  #dash.gap<- c('NA', 'NA', sapply(1:dashes, function(x) sapply(1:3, function(y) 2*y)))
-  possible_styles<-c('solid', 'dotted', rep('dashed', dashes*dashes))
-
-  for (i in 1:length(unique(all_networks$key))){
-    c<-combos
-    c$arrow_style<-possible_styles[i]
-    c$key<-unique(all_networks$key)[i]
-    cl[[i]]<-c
-  }
-  combos<-rbindlist(cl)
-  print(combos)
-  return(combos)
-}
-
-get_color<-function(color.df, t){
-  print(color.df)
-  print(t)
-  values<- unique(color.df[(tool==t)]$value)
-  print(values)
-  names(values)<-unique(color.df[(tool==t)]$interaction)
-  return(values)
-  }
-
-
-
-
-# parsing the selection into a configuration data.table that has all necessary information to enable all features of the shiny app.
-# every row corresponds to ONE comparison in the input configuration file (or the one comparison of tsv mode)
-configuration <-
-  data.table(
-    key = NULL,
-    assay = NULL,
-    group_var = NULL,
-    condition_names = NULL,
-    tools = NULL,
-    network_files = NULL
-  )
-
-if (opt$mode == "tsv") {
-  # get tools
-  tools <-
-    list.dirs(
-      path = file.path(opt$results.path, opt$selection),
-      full.names = FALSE,
-      recursive = FALSE
-    )
-  tool_names <- paste(tools, collapse = ",")
-  
-  # get network files
-  all_files <-
-    list.files(
-      path = file.path(opt$results.path, opt$selection),
-      full.names = TRUE,
-      recursive = TRUE
-    )
-  
-  network_files <-
-    c(grep("aggregated_filtered_network", all_files, value = TRUE))
-  network_files <- paste(network_files, collapse = ",")
-  
-  # get condition names
-  files <-
-    list.files(
-      path = file.path(opt$results.path, opt$selection),
-      full.names = FALSE,
-      recursive = FALSE
-    )
-  cond_files <- c(grep("out_", files, value = TRUE))
-  cond_name1 <- gsub("out_", "", cond_files[1])
-  cond_name1 <- gsub(".tsv", "", cond_name1)
-  cond_name2 <- gsub("out_", "", cond_files[2])
-  cond_name2 <- gsub(".tsv", "", cond_name2)
-  cond_names <- paste(c(cond_name1, cond_name2), collapse = ",")
-  
-  configuration <- rbind(
-    configuration,
-    list(
-      key = opt$selection,
-      assay = "RNA",
-      group_var = NA,
-      condition_names = cond_names,
-      tools = tool_names,
-      network_files = network_files
-    )
-  )
-} else {
-  # parse selection
-  selections <-
-    sapply(strsplit(opt$selection, "-")[[1]], function(x) {
-      strsplit(x, ",")[[1]]
-    })
-  selections <- as.data.table(rbind(t(selections)))
-  colnames(selections) <-
-    c("key", "assay", "group_var", "condition", "condition2")
-  
-  an <- list()
-  for (k in unique(selections$key)) {
-    all_files <-
-      list.files(
-        path = file.path(opt$results.path, k),
-        full.names = TRUE,
-        recursive = TRUE
-      )
-    network_files <-
-      c(grep("aggregated_filtered_network", all_files, value = TRUE))
-    all_networks <- read_files(network_files, k)
-    an[[k]] <- all_networks
-  }
-  all_networks <- rbindlist(an)
-  
-    colnames(all_networks) <-
-    c(
-      "target",
-      "source",
-      "weight",
-      "interaction",
-      "effect",
-      "tool",
-      "key"
-    )
-    
-  color.map<-make_color_map(all_networks)
 
 # get all factors and columns that were used in the selection but were not of class factor
 factors <- unique(c(names(which(sapply(adata@meta.data, class)=='factor')), selections$group_var[1]))
@@ -1170,3 +976,4 @@ server <- function(input, output, session) {
 
 # RUN SHINY APP ----
 shinyApp(ui = ui, server = server)
+
