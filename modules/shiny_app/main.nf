@@ -7,14 +7,24 @@ process CREATE_SHINY_APP {
   val diffgrn_tools
   val grn_tools
   val mode
+  val metacells
 
   output:
-  path ("run_shiny.sh")
+  path ("app/run_shiny.sh")
+  path ("app/style_generator.R")
+  path ("app/auxiliary_functions.R")
+  path ("app/shiny_app.R")
+  path ("app/style.js")
+  
 
   script:
   """
-  touch "run_shiny.sh"
-  echo "Rscript ${projectDir}/modules/shiny_app/resources/usr/bin/shiny_app.R -r ${params.publish_dir} -p ${projectDir} -s ${selection} -f ${seurat_file} --dgrntools ${diffgrn_tools} --grntools ${grn_tools} -m ${mode}" >> "run_shiny.sh"
-  chmod u+x "run_shiny.sh"
+  mkdir app
+  touch "app/run_shiny.sh"
+  echo "Rscript shiny_app.R -r ${params.publish_dir} -s ${selection} -f ${seurat_file} --dgrntools ${diffgrn_tools} --grntools ${grn_tools} -m ${mode}" --metacells ${metacells} >> "app/run_shiny.sh"
+  chmod u+x "app/run_shiny.sh"
+  cp ${projectDir}/modules/shiny_app/resources/usr/bin/* app
+  cp ${projectDir}/environment_configs/shiny.yml app
+  cp ${projectDir}/install_shiny_packages.R app
   """
 }
