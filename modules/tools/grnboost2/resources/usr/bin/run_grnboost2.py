@@ -18,23 +18,18 @@ from docopt import docopt
 import os
 
 def run_grnboost2(file1, file2, output_folder):
-    ex_matrix_cond1 = pd.read_csv(file1, sep='\t')
-    ex_matrix_cond2 = pd.read_csv(file2, sep='\t')
+    ex_matrix_cond1 = pd.read_csv(file1, sep='\t', index_col = 0).T
+    ex_matrix_cond2 = pd.read_csv(file2, sep='\t', index_col = 0).T
 
-    proc_exp_matrix_cond1 = ex_matrix_cond1.T
-    proc_exp_matrix_cond1 = proc_exp_matrix_cond1.set_axis(ex_matrix_cond1.iloc[:,0], axis=1).set_axis(range(0, len(proc_exp_matrix_cond1)), axis=0).iloc[1:,:]
-
-    proc_exp_matrix_cond2 = ex_matrix_cond2.T
-    proc_exp_matrix_cond2 = proc_exp_matrix_cond2.set_axis(ex_matrix_cond2.iloc[:,0], axis=1).set_axis(range(0, len(proc_exp_matrix_cond2)), axis=0).iloc[1:,:]
-
-
-    expr_matrix = pd.concat([proc_exp_matrix_cond1, proc_exp_matrix_cond2])
+    expr_matrix = pd.concat([ex_matrix_cond1, ex_matrix_cond2])
 
     network = grnboost2(expression_data=expr_matrix)        
     network.to_csv(output_folder, sep='\t', index=False)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='GRNBoost2 run')
-    run_grnboost2(file1 = arguments["--inputfile1"],
+    run_grnboost2(
+        file1 = arguments["--inputfile1"],
         file2 = arguments["--inputfile2"],
-        output_folder= arguments["--output"])
+        output_folder= arguments["--output"]
+    )
