@@ -52,7 +52,7 @@ workflow {
   data = LOAD_DATA(tools)
   networks = RUN_TOOLS(data, tools)
   networks.view()
-  ANALYSIS(networks)
+  // ANALYSIS(networks)
   SHINY_APP(diffgrn_tools, grn_tools)
 
   // // // TODO: Make NF pipeline creation of shiny App work with variable no. input network files and different data input formats

@@ -1,5 +1,5 @@
 process RUN_TOOL {
-  conda params.conda_env_path + '/zscores'
+  label 'zscore'
   publishDir params.publish_dir
 
   input:

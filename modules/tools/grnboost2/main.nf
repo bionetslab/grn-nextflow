@@ -1,5 +1,5 @@
 process RUN_TOOL {
-  conda params.conda_env_path + '/grnboost2'
+  label 'grnboost2'
   maxForks 5
   publishDir params.publish_dir
 
@@ -19,7 +19,7 @@ process RUN_TOOL {
 }
 
 process AGGREGATE_RESULTS {
-  conda params.conda_env_path + '/grnboost2'
+  label 'grnboost2'
   publishDir params.publish_dir
 
   input:
