@@ -36,7 +36,7 @@ process CREATE_METACELLS_SEURAT {
 process CONVERT_ANNDATA_TO_SEURAT {
   publishDir params.publish_dir
   label 'big_mem'
-  conda params.conda_env_path + '/create_metacells'
+  label 'anndata_to_seurat'
 
   input:
   path anndata_object
