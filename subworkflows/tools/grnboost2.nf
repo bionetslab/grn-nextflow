@@ -7,7 +7,7 @@ workflow GRNBOOST2 {
         runs
     
     main:
-        grnboost2 = RUN_TOOL(data, runs)
+        grnboost2 = RUN_TOOL(data, params.use_tf_list, runs)
         grnboost2_grouped = grnboost2.groupTuple()
 
         grnboost2_grouped.view()

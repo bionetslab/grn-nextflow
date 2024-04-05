@@ -5,6 +5,7 @@ process RUN_TOOL {
 
   input:
   tuple val (key), path (case_file), path (control_file)
+  val (use_tf_list)
   each run
 
   output:
@@ -14,7 +15,7 @@ process RUN_TOOL {
   """
   mkdir -p "${key}/grnboost2/run_${run}"
   mkdir -p "${key}/grnboost2/run_${run}"
-  run_grnboost2.py -c $case_file -d $control_file -o ${key}/grnboost2/run_${run}/network.tsv
+  run_grnboost2.py -c $case_file -d $control_file -o ${key}/grnboost2/run_${run}/network.tsv -u $use_tf_list -w ${workflow.projectDir}
   """
 }
 
