@@ -30,8 +30,8 @@ require(colorspace)
 require(presto)
 ################################################################################
 
-source('style_generator.R')
-source('auxiliary_functions.R')
+source('app/style_generator.R')
+source('app/auxiliary_functions.R')
 
 option_list <- list(
   make_option(
@@ -169,8 +169,8 @@ edges <- graph[[2]]
 # Generate the style JSON
 style_json <- generate_style_json(color.map$tool, color.map$value, color.map$condition, color.map$key, color.map$arrow_style, color.map$dash.style)
 # Write the style JSON to a file
-writeLines(style_json, "style.js")
-basicStyleFile <- "style.js"
+writeLines(style_json, "app/style.js")
+basicStyleFile <- "app/style.js"
 styleList <- c("", "Basic" = "basicStyleFile")
 
 
@@ -423,7 +423,7 @@ server <- function(input, output, session) {
     # Generate the style JSON
     style_json <- generate_style_json(color.map()$tool, color.map()$value, color.map()$interaction, color.map()$key, color.map()$arrow_style, color.map()$dash.style)
     # Write the style JSON to a file
-    writeLines(style_json, "style.js")
+    writeLines(style_json, "app/style.js")
     loadStyleFile(basicStyleFile)
     
     if (!is.null(genes)){

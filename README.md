@@ -1,27 +1,26 @@
-# Inter-Net Xplorer
-## Installation Instruction 
+# DGRN-Benchmark
+## Installation Instructions
 1) Install nextflow with the following command (can be moved to any directory you want): (requires Java version 11 or higher)   
 ```
 curl -fsSL get.nextflow.io | bash
 ```
-2) Clone the Inter-Net Xplorer repository and navigate to it (TODO change name of the repo):
+2) Install singularity (https://docs.sylabs.io/guides/3.0/user-guide/installation.html)
+Note: Singularity images will be created when executing the pipeline. These are automatically stored in a cache in the nextflow `work` directory AND in your home directory. The singularity cache directory can be changed from the home directory to any directory via the environment variable `SINGULARITY_CACHEDIR` in your `.bashrc`
+3) Clone the grn-benchmark repository and navigate to it:
 ```
-git clone --branch dgrn_nf git@github.com:bionetslab/boostdiff-nextflow.git && cd boostdiff-nextflow
+git clone git@github.com:bionetslab/grn-nextflow.git && cd grn-nextflow
 ```
-3) Install mamba (see https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html). Needed for quicker installation of conda environments.
-4) Install all conda environments for all steps of the pipeline via:
+4) Go into `nextflow.config` and change the parameter `singularity.runOptions` to the folder that contains your nextflow `work` directory and the folder that will contain your results folder (user-defined at start of pipeline). If they are separate folders, use a comma separated list  
+
+Now you are set to run the benchmark! 
+
+If you want to run the resulting shiny app saved in `example_pipeline_output`, use (change $RESULT_DIRECTORIES to all result output directories of the pipeline in `output`):
 ```
-./initialize.sh $(ENVIRONMENT_INSTALLATION_DIRECTORY) $(CONDA_SOURCE_PATH)
-```   
-- `ENVIRONMENT_INSTALLATION_DIRECTORY`: The path to the directory in which all of the environments should be installed. If you want them to be installed in the same directory as Inter-Net Xplorer use: `./`
-- `CONDA_SOURCE_PATH`: The path to the source (bin) directory of your conda installation.
-
-5) Go into `nextflow.config` and change the parameter `conda_env_path` to the `ENVIRONMENT_INSTALLATION_DIRECTORY` path
-
-Now you are set to run Inter-Net Xplorer!
-
-If you want to run the resulting shiny app activate the `shiny` conda environment in `ENVIRONMENT_INSTALLATION_DIRECTORY`.
-
+cp -rL example_pipeline_output output && cd output
+singularity pull docker://nicolaimeyerhoefer/shiny_app
+singularity exec --bind=./app:/app/,./data:/data/,./$RESULT_DIRECTORIES/:/$RESULT_DIRECTORIES/ ./shiny_app_latest.sif 'app/run_shiny.sh'
+```
+TODO: Adjust pipeline so the first copying step is not necessary! (Needed atm because pipeline only creates symlinks)
 
 ## Interpretation of computed networks of Inter-Net Xplorer
 See this pdf [Network Explanation](https://github.com/bionetslab/grn-nextflow/blob/dgrn_nf/man/network_explanation.pdf)
