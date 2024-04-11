@@ -14,6 +14,8 @@ git clone git@github.com:bionetslab/grn-nextflow.git && cd grn-nextflow
 
 Now you are set to run the benchmark! 
 
+## Running the shiny application
+Relevant if the files are linked as symbolic links: create a hard copy of the files.
 If you want to run the resulting shiny app saved in `example_pipeline_output`, use (change $RESULT_DIRECTORIES to all result output directories of the pipeline in `output`):
 ```
 cp -rL example_pipeline_output output && cd output
