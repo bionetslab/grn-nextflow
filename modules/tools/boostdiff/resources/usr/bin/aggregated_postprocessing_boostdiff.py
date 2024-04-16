@@ -24,7 +24,7 @@ import numpy as np
 import time
 import os
 
-def load_boostDiff_results(n_runs):
+def load_boostDiff_results(n_runs, output_path):
     """Loads the data of $n_runs boostdiff runs. See https://github.com/gihannagalindez/boostdiff_inference for more information about the outputs.
     
     Args:
@@ -53,6 +53,52 @@ def load_boostDiff_results(n_runs):
     differencesTests_condition1, differencesTests_condition2 = [], []
     
     for i in range(n_runs):
+        net_cond1 = pd.read_csv(
+            os.path.join(f'run_{i+1}/{file_condition[0][2]}/boostdiff_network_test.txt'), 
+            sep='\t', 
+            names=["target", "regulator", "weight"], 
+            header=None
+        )
+        net_cond1["condition"] = file_condition[0][0]
+        
+        node_weights_cond1 = pd.read_csv(
+            os.path.join(f'run_{i+1}/{file_condition[0][2]}/differences_test.txt'), 
+            sep='\t', 
+            names=["gene", "error_diff"], 
+            header=None
+        )
+        node_weights_cond1["condition"] = file_condition[0][0]
+
+        net_cond2 = pd.read_csv(
+            os.path.join(f'run_{i+1}/{file_condition[0][2]}/boostdiff_network_test.txt'), 
+            sep='\t', 
+            names=["target", "regulator", "weight"], 
+            header=None
+        )
+        net_cond2["condition"] = file_condition[1][0]
+
+        node_weights_cond2 = pd.read_csv(
+            os.path.join( f'run_{i+1}/{file_condition[1][2]}/differences_test.txt'), 
+            sep='\t', 
+            names=["gene", "error_diff"], 
+            header=None
+        )
+        node_weights_cond2["condition"] = file_condition[1][0]
+
+        os.makedirs(os.path.join(output_path, f'run_{i+1}/'))
+        node_weights = pd.concat([node_weights_cond1, node_weights_cond2])
+        node_weights.to_csv(
+            os.path.join(output_path, f'run_{i+1}/node_weights.tsv'), 
+            sep = '\t', 
+            index=False
+        )
+        net = pd.concat([net_cond1, net_cond2])
+        net.to_csv(
+            os.path.join(output_path, f'run_{i+1}/network.tsv'), 
+            sep = '\t',
+            index=False
+        )
+
         boostDiffNetworks_condition1.append(pd.read_csv(os.path.join(f'run_{i+1}/{file_condition[0][2]}/boostdiff_network_test.txt'), 
                                             sep='\t', names=["target", "regulator", f"weight{i+1}"], header=None))
         boostDiffNetworks_condition2.append(pd.read_csv(os.path.join(f'run_{i+1}/{file_condition[1][2]}/boostdiff_network_test.txt'), 
@@ -197,7 +243,9 @@ def main(output_folder, n_runs, top_n_targets=20, top_n_edges=100):
         top_n_edges (int, optional): Top n edges for filtering. Defaults to 100.
     """
     boostDiffNetworks_condition1, boostDiffNetworks_condition2, differencesTests_condition1, differencesTests_condition2, file_condition = load_boostDiff_results(
-        n_runs=n_runs)
+        n_runs=n_runs,
+        output_path = output_folder
+    )
     
     # perform "union" aggregation
     aggregated_network_condition1, aggregated_network_condition2, aggregated_differencesTests_condition1, aggregated_differencesTests_condition2 = union_aggregation(

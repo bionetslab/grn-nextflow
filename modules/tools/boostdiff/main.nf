@@ -1,7 +1,7 @@
 process RUN_TOOL {
   label 'boostdiff'
-  maxForks 5
-  publishDir params.publish_dir
+  maxForks 8
+  // publishDir params.publish_dir
 
   input:
   tuple val (key), path (case_file), path (control_file)
@@ -36,6 +36,8 @@ process AGGREGATE_RESULTS {
 
   output:
   tuple val (key), path ("${key}/boostdiff/aggregated_filtered_network_boostdiff.txt")
+  path "${key}/boostdiff/run_*/network.tsv"
+  path "${key}/boostdiff/run_*/node_weights.tsv"
 
   script:
   """

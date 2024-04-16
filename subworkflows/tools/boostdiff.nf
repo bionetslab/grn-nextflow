@@ -27,6 +27,6 @@ workflow BOOSTDIFF {
         boostdiff_network = AGGREGATE_RESULTS(data.join(boostdiff_grouped), params.n_runs, boostdiff_filtering_settings)
 
     emit:
-        boostdiff_network
+        boostdiff_network[1]
     
 }
