@@ -2,6 +2,7 @@ include { BOOSTDIFF } from './tools/boostdiff'
 include { GRNBOOST2 } from './tools/grnboost2'
 include { Z_SCORE } from './tools/z_score'
 include { DIFFCOEX } from './tools/diffcoex'
+include { CHNET } from './tools/chnet'
 
 workflow RUN_TOOLS {
     take:
@@ -27,6 +28,10 @@ workflow RUN_TOOLS {
 
                 case "diffcoex":
                     networks.add(DIFFCOEX(data))
+                    break
+
+                case 'chnet':
+                    networks.add(CHNET(data))
                     break
             }
         }
