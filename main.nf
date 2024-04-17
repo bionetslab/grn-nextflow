@@ -30,7 +30,7 @@ include { SHINY_APP } from './subworkflows/shiny_app'
 
 workflow {
   List<String> available_GRNInference_tools = ["grnboost2"]
-  List<String> available_DGRNInference_tools = ["boostdiff","zscores"]  
+  List<String> available_DGRNInference_tools = ["boostdiff","zscores","chnet"]  
   List<String> tools = params.tools.split(",")
   
   diffgrn_tools = []
