@@ -5,7 +5,7 @@ workflow CHNET {
         data
     
     main:
-        chnet = RUN_TOOL(data, params.chnet.lambda, params.chnet.parallel)
+        chnet = RUN_TOOL(data, params.chnet.lambda)
     
     emit:
         chnet

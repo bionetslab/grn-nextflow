@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(chNet)
 library(data.table)
 library(optparse)
@@ -34,17 +36,14 @@ option_list <- list(
     ),
     make_option(
       c('--run_parallel'),
-      type = 'bool',
+      type = 'logical',
       help = 'Run method in parallel',
-      default = T
+      default = TRUE
     )
 )
 
 opt <- parse_args(OptionParser(option_list=option_list))
 
-print(opt$n_cpus)
-opt$n_cpus <- 10
-s
 cond_name_1 <- sub('.*out_', "", opt$input.file.1)
 cond_name_2 <- sub('.*out_', "", opt$input.file.2)
 
@@ -61,4 +60,4 @@ result <- chNet(data, groups, lambar = opt$lambda, parallel = opt$run_parallel, 
 
 net <- as_data_frame(result$Diff.net, 'edges')
 
-fwrite(net, paste0(opt$output.file, "aggregated_filtered_network_zscores.txt"), sep="\t")
+fwrite(net, paste0(opt$output.file, "aggregated_filtered_network_chNet.txt"), sep="\t")
