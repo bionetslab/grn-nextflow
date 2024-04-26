@@ -70,7 +70,7 @@ def load_boostDiff_results(n_runs, output_path):
         node_weights_cond1["condition"] = file_condition[0][0]
 
         net_cond2 = pd.read_csv(
-            os.path.join(f'run_{i+1}/{file_condition[0][2]}/boostdiff_network_test.txt'), 
+            os.path.join(f'run_{i+1}/{file_condition[1][2]}/boostdiff_network_test.txt'), 
             sep='\t', 
             names=["target", "regulator", "weight"], 
             header=None
