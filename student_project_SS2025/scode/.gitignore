@@ -1,0 +1,22 @@
+# .gitignore
+
+# Ignore Nextflow working directories
+work/
+.nextflow*
+results/
+
+# Ignore large or auto-generated data
+*.txt
+*.csv
+*.h5ad
+
+# Ignore Conda environments
+.env/
+*.env
+*.yml
+*.lock
+
+# VS Code and system files
+.vscode/
+.DS_Store
+Thumbs.db

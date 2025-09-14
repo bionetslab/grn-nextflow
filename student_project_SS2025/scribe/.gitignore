@@ -1,0 +1,60 @@
+cat > .gitignore << 'EOF'
+# --- Nextflow runtime ---
+work/
+.nextflow*
+.cache/
+timeline.html
+trace.txt
+report.html
+report-*.html
+dag.png
+*timeline*.html
+*trace*.txt
+*report*.html
+
+# --- Pipeline outputs (keep code clean) ---
+results*/
+**/inputs/
+**/results/
+**/final/
+
+# If you want to keep final results, comment the three lines above
+# and explicitly track a subfolder with:  git add -f results_scribe/final
+
+# --- Data files (large) ---
+*.h5ad
+*.h5
+*.loom
+*.mtx
+*.npz
+*.npy
+*.rds
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# --- R ---
+.Rhistory
+.Rproj.user/
+.RData
+.Ruserdata
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# --- Zip/tar/archives ---
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+EOF

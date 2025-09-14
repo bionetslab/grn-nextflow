@@ -1,0 +1,57 @@
+# ------------------------
+# Conda environments & caches
+# ------------------------
+.conda/
+test_env/
+.env/
+*.env
+*.yml~
+*.yaml~
+
+# ------------------------
+# Python bytecode & logs
+# ------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.log
+
+# ------------------------
+# Jupyter Notebooks
+# ------------------------
+.ipynb_checkpoints/
+
+# ------------------------
+# Nextflow-specific
+# ------------------------
+work/
+results/
+.nextflow*
+.cache/
+*.nf.log
+*.trace
+*.report
+*.timeline.html
+
+# ------------------------
+# Project-specific files
+# ------------------------
+expression.tsv
+*.h5ad
+*.png
+*.svg
+*.pdf
+
+# ------------------------
+# System files (Windows/macOS)
+# ------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ------------------------
+# VS Code/IDE
+# ------------------------
+.vscode/
+.idea/
+*.code-workspace
