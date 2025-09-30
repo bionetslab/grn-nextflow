@@ -1,0 +1,7 @@
+name: adata_tords
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - conda-forge::anndata=0.10.7
+  - conda-forge::pandas=2.3.2
